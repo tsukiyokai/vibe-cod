@@ -57,16 +57,31 @@ description: >
 
 步骤:
 1. 拆解关键词 — 例："支持跨框非对称拓扑的Mesh+NHR多维并行算法" → 概念集群: {跨框, 非对称拓扑} + {Mesh, NHR, 多维并行}
-2. 对每个概念集群启动一个Explore subagent，在所有涉及的仓库中并行扫描:
+2. 建立全局视图 — 读 references/dig-repo-code/phase0-architecture-map.md 理解hcomm/hccl三层架构全局视图。如果任务涉及跨仓库修改，读 phase4-contrastive-analysis.md 理解两仓的风格差异。如果任务涉及特定子系统（如AllReduce链路、资源生命周期），按需读phase5切片。
+3. 对每个概念集群启动一个Explore subagent，在所有涉及的仓库中并行扫描:
    - Grep代码库找所有相关实现 → 逐一Read理解核心逻辑
-   - 通过 references/knowledge-map.md 路由到对应文档资源
+   - 通过 references/knowledge-map.md 路由到对应文档资源（含"代码阅读分析"和"设计原则提炼"两个section可作深入阅读）
    - 必要时WebSearch补充背景知识（论文、算法原理、业界实现）
-3. 跨仓库关联分析: 理解仓库间的接口边界（如hccl对外暴露的API、hcomm作为上层如何调用）
-4. 各agent汇总后，建立概念关联图: 这些概念之间如何交互，现有代码如何组织它们
+4. 跨仓库关联分析: 理解仓库间的接口边界（如hccl对外暴露的API、hcomm作为上层如何调用）
+5. 各agent汇总后，建立概念关联图: 这些概念之间如何交互，现有代码如何组织它们
 
 目标: 把每个相关的知识点和现有代码实现都搞清楚，不留盲区。
 
-### 0.3 深度代码考古
+### 0.3 风险区定位
+
+读取涉及仓库对应的 references/dig-repo-log/<repo>/hotspot_analysis.md，确认:
+- 目标文件是否在高风险文件列表中
+- 目标文件所属模块的缺陷密度
+- 如果目标文件是缺陷磁铁: 提高后续所有阶段的审慎程度，向用户报告风险
+
+### 0.4 调用链分析
+
+理解目标代码在系统中的位置:
+- 向上追溯: 谁调用了目标函数/类？这些调用方依赖什么不变量（前置条件、返回值语义、副作用）？
+- 向下追溯: 目标代码依赖的下游接口，它们的契约是什么（参数约束、错误码含义、线程安全性）？
+- 修改接口时: 必须找到所有调用点，评估每个调用点的兼容性
+
+### 0.5 深度代码考古
 
 对目标代码进行WHY层面的理解:
 - 阅读目标文件及其核心依赖，理解当前设计意图
@@ -81,6 +96,7 @@ description: >
 1. 现有系统如何工作
 2. 我的改动如何融入其中
 3. 可能受影响的关联模块
+4. 调用方依赖的不变量，我的改动是否会破坏它们
 
 在继续之前，向用户输出这段解释并确认理解正确。
 
@@ -101,7 +117,11 @@ description: >
 - 按需扩展: 任务复杂度高/涉及跨模块 → 读相关模块的核心文件
 - 跨仓库注意: 不同仓库可能有不同的惯用法，每个仓库分别建立清单
 
-读取 references/cann-cpp-conventions.md 获取CANN项目级约束。
+仓库风格速查:
+- hcomm: DeviceMem/HostMem异构内存、Pimpl(`_pub.h`)、`owner_`所有权标记、tag`[通信域名]`日志、Manager类后缀、CHK_SMART_PTR_NULL高频、EXCEPTION_HANDLE在C API边界
+- hccl: 纯STL内存管理（委托hcomm处理设备内存）、executor/selector/template三件套、`[Module]`前缀日志、无Pimpl、Registry全局注册宏
+
+读取 references/conventions/cann-cpp-conventions.md 获取CANN项目级约束。
 
 ### 阶段1退出标准
 
@@ -113,23 +133,34 @@ description: >
 
 ### 缺陷模式防御
 
-读取 references/knowledge-map.md 定位相关资源，然后:
-- 根据任务类型读取repo-dig中对应的缺陷模式原文:
-  - 涉及通信算法 → 读hccl-dev和hcomm-dev的pattern_summary.md
-  - 涉及算子开发 → 读ops-transformer/ops-nn的pattern_summary.md
-  - 通用 → 读cross_repo_synthesis.md的对应章节
-- 识别与当前任务最相关的TOP 3-5缺陷风险点
+按层次深度阅读repo-dig资源，不跳过任何一层:
+
+第一层 — 系统性认知:
+- Read references/dig-repo-log/cross_repo_synthesis.md 全文，建立跨仓缺陷全景视角
+
+第二层 — 仓库专项模式:
+根据涉及的仓库，Read对应目录下的全部分析文件:
+  - pattern_summary.md — 缺陷分类与频次分布
+  - standards_project_*.md — 规则化审查清单(含规则ID和代码示例)
+  - revert_analysis.md — 架构级灾难案例与教训
+  - defect_analysis.md — 逐条缺陷的根因、修复模式、涉及文件
+
+仓库路由:
+  - 涉及通信算法 → 读hccl、hccl-dev、hcomm-dev
+  - 涉及算子开发 → 读ops-transformer[-dev]、ops-nn[-dev]
+
+第三层 — 风险点提炼:
+- 综合以上阅读，识别与当前任务相关的所有缺陷风险点
 - 为每个风险点制定防御策略（编码时具体怎么做来避免）
 
-8个跨仓通用缺陷模式速查:
-1. 整数溢出与类型安全 — shape连乘用int64_t; GM偏移用uint64_t; uint减法前判a>=b; DataCopy参数不超uint16
-2. 条件分支覆盖不完整 — 新枚举值全局搜switch/if-else; De Morgan律检查; 0是否合法值
-3. CMake/构建配置遗漏 — 新文件同步CMakeLists.txt; 检查所有编译目标
-4. 复制粘贴错误 — 逐行比对变量名; f(a,a)检查; 日志tag匹配
-5. 流水线同步缺陷 — DataCopy前后barrier; SetFlag/WaitFlag配对; FreeTensor在barrier之后
-6. Host/Kernel不一致 — workspace大小交叉比对; TilingData共享头文件; 单位一致(字节/元素/block)
-7. 空指针与初始化 — 内置类型成员in-class initializer; 先判空后解引用; cast后检查null
-8. 大规模提交风险 — 功能变更独立提交; commit message描述意图
+第四层 — AI编码陷阱防御:
+以下6个高频陷阱是AI编码助手最容易犯的错误，按危险度排序:
+1. 新增枚举值后只更新部分switch/if/map — 必须全局搜索枚举类型名，逐一核对所有使用点
+2. 复制粘贴相似代码后变量名/参数未完全替换 — 逐行diff对比源代码与目标代码
+3. 新增源文件后遗漏CMakeLists.txt注册 — 每新增.cc/.h必须同步更新CMake
+4. 多维shape乘法溢出（直译数学公式不考虑中间值范围）— 连乘必须用int64_t
+5. host/kernel两侧修改不同步 — workspace/tilingData/tilingKey修改必须成对出现
+6. V1/V2双代路径修改不对称 — 检查HCCLV2_FUNC_RUN宏的两条路径是否都更新
 
 ### API/文档按需查阅
 
@@ -140,7 +171,7 @@ description: >
 
 ### 阶段2退出标准
 
-已识别TOP 3-5缺陷风险点，每个都有明确的防御策略。
+已识别所有相关缺陷风险点，每个都有明确的防御策略。
 
 ---
 
@@ -152,36 +183,50 @@ description: >
 - 跨仓库编码顺序: 先修改底层仓库(如hccl)，再修改上层仓库(如hcomm)，确保接口一致性
 - 跨仓库接口检查: 修改跨仓库接口时，确保两侧的数据结构、参数类型、错误码定义完全一致
 
-### C++风格
+### 每个功能点的编码流程
 
+对每个功能点，严格按以下顺序执行:
+
+第一步 — 设计:
+- 明确这个功能点的输入、输出、前置条件、后置条件
+- 穷举边界条件: 空输入、零值、最大值、溢出、并发、重入、部分失败
+- 定义错误路径: 每种失败场景的处理方式和资源清理
+- 如果存在多种实现方案，列出各方案的优劣，选择失败模式最少的那个
+- 先写出函数签名和类接口，确认职责划分合理后再实现
+
+第二步 — 实现:
 - 主动使用检测到的C++标准允许的最新特性
-- 追求精简优美: 参考 references/cann-cpp-conventions.md 中的项目约束
+- 遵循 references/conventions/cann-cpp-conventions.md 中的项目约束
 - 遵循阶段1建立的惯用法清单
+- Read references/conventions/design-and-coding-guide.md 全文，对照审视当前设计决策
+- 特殊场景处理（来自验证报告）:
+  - 析构/清理路径: 不使用CHK_RET（会中断清理），改用`(void)`忽略或记录后继续
+  - extern "C"返回unsigned int的函数: 无法CHK_RET，手动if检查
+  - C ABI的POD struct: 可用malloc/free，不强制智能指针
+  - struct字段初始化: 要么全部提供默认值，要么全部不提供
+  - const正确性: 只读参数必须const修饰
+  - format string: %s/%d/%u必须与参数类型匹配
+  - 容器遍历中不得通过函数调用间接修改容器（析构中先收集key再逐个删除）
+  - 注册到外部系统的数据: 确认生命周期覆盖外部使用期，栈变量不适合
+
+第三步 — 对抗性自审:
+写完后立即以攻击者视角审视这段代码:
+- 如果我要让这段代码崩溃/产生错误结果/死锁/泄漏，我会怎么构造输入？
+- 第一步中穷举的每个边界条件，代码是否都正确处理了？
+- 错误路径上的资源是否全部释放？是否有early return绕过了清理逻辑？
+- 并发场景: 如果两个线程同时执行这段代码，会发生什么？
+- 发现任何可攻破的点 → 立即修复，不留到阶段4
+
+第四步 — 缺陷过筛:
+对照阶段2识别的缺陷风险点逐一检查这个功能点。
 
 ### 设计模式与代码优雅
 
-动笔前审视:
-- 当前功能点是否适合应用设计模式？
-  - Strategy: 消除if-else/switch链（>3个分支且可能增长）
-  - Template Method: 多个类有相似流程但个别步骤不同
-  - Factory: 调用方不需要知道具体类型
-  - RAII: 资源获取即初始化
-- 参考 references/design-principles.md 速查
-
-每写完一个功能点回看:
-- 有没有重复代码可以提取？
-- 有没有过长函数(>40行)可以拆分？
-- 有没有过深嵌套(>3层)可以用early return简化？
-- 命名是否自解释？有没有魔数需要constexpr？
-- 参数是否过多(>4)需要用结构体打包？
+Read references/conventions/design-and-coding-guide.md 全文，对照审视当前代码。
 
 重构意识:
 - 如果发现现有代码有明显的设计缺陷，且修改范围可控，主动提出重构建议
 - 但必须用户确认后再动手，不擅自大规模重构
-
-### 实时缺陷防御
-
-每写完一个功能点，对照阶段2识别的缺陷风险点过筛。
 
 ### 设计文档迭代对齐
 
@@ -193,16 +238,51 @@ description: >
 
 ### 阶段3退出标准
 
-所有功能点已实现，每个都通过了缺陷风险点过筛，跨仓库接口一致，代码符合clean code原则。
+所有功能点已实现，每个都经过了设计→实现→对抗→过筛的完整流程，跨仓库接口一致。
 
 ---
 
-## 阶段4: 验证 — 自检 + 编译 + 缺陷过筛
+## 阶段4: 验证 — 全量自检
 
-- 可选: 调用 /vibe-review 对自己的变更做完整检视
-- 检查编译: 确保代码能通过编译（如果有可用的构建环境）
-- 最终缺陷过筛: 对照所有识别的缺陷风险点做最终检查
-- 完整性检查: 是否遗漏了CMake配置、测试用例、头文件等配套修改
+所有检查项均为必须执行，不可跳过。
+
+### 4.1 冷读审查
+
+清空编码时的思维惯性，以reviewer视角重新审视:
+- 生成自己的完整变更diff
+- 逐行阅读diff，不依赖编码时的记忆，只看代码本身能否自解释
+- 对每个改动问: 这行代码的意图是否清晰？不看上下文能否理解？
+
+### 4.2 场景走查
+
+用具体的输入值心算执行完整路径:
+- 为每个公开函数构造至少3组输入: 正常路径、边界值、错误路径
+- 手动跟踪变量值的变化，验证输出符合预期
+- 特别关注: 类型转换点的值域、循环的终止条件、条件分支的覆盖完整性
+
+### 4.3 规则化自检
+
+重新Read涉及仓库的standards_project_*.md，逐条规则对照自己的变更检查。
+重新Read references/conventions/cann-cpp-conventions.md，逐条约束对照检查。
+
+### 4.4 缺陷过筛
+
+对照阶段2识别的所有缺陷风险点做最终检查。
+
+### 4.5 完整性检查
+
+- 是否遗漏了CMake配置、头文件、前向声明等配套修改
+- 新增枚举值/类型: 全局grep枚举类型名，逐一核对所有switch/if-else/map/数组是否同步
+- 新增源文件: 确认CMakeLists.txt已注册
+- 跨仓库修改: 两侧的接口定义完全一致，读 phase4-contrastive-analysis.md 确认风格一致
+- format string: 日志中所有%格式符与参数类型匹配
+- const正确性: 所有只读参数标记const
+- struct初始化一致性: 新增/修改的struct字段默认值风格统一
+- 复制粘贴检查: 如果有从相似代码复制的部分，逐行对比确认所有标识符已更新
+
+### 4.6 代码检视
+
+调用 /vibe-review 对自己的变更做完整检视。
 
 ### 阶段4退出标准
 
@@ -226,5 +306,5 @@ description: >
 ## 与其他skill协作
 
 - vibe-design: 可读取其产出的设计文档作为阶段0.1的输入
-- vibe-review: 阶段4可调用做自检（推荐）
+- vibe-review: 阶段4.6调用做代码检视
 - vibe-pr: 编码完成后可衔接提交流程
