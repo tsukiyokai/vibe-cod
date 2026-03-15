@@ -174,6 +174,8 @@ abseil-tips.md — Abseil C++ Tips精选
 根目录: references/docs/hccl/
 
 按场景选择:
+  HCCL完整使用指南(中文)     → references/docs/hccl/HCCL集合通信库使用指南.md (4800+行，综合性中文指南)
+  Ascend C算子开发(中文)     → references/docs/hccl/Ascend C算子开发指南.md (18000+行，算子开发全流程)
   通信整体流程、拓扑、算法   → references/docs/hccl/user-guide.md (3911行，用Grep搜索关键词)
   C语言API用法              → references/docs/hccl/api-c.md (1514行)
   Python API               → references/docs/hccl/api-python.md (888行)
@@ -182,3 +184,4 @@ abseil-tips.md — Abseil C++ Tips精选
   性能测试工具              → references/docs/hccl/hccl-test.md (712行)
   故障排查                  → references/docs/hccl/faq.md
   版本迁移                  → references/docs/hccl/migration.md
+  目录总览                  → references/docs/hccl/README.md
