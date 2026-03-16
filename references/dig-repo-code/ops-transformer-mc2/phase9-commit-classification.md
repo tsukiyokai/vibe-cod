@@ -1,0 +1,1054 @@
+# Phase 9.1: MC2 Commit Classification Index
+
+## 9.1.2: Category Distribution
+
+Total unique commits (after message dedup): 991
+
+| Category | Count | % | Main | Dev |
+|----------|-------|---|------|-----|
+| NEW_OP | 15 | 1.5% | 9 | 6 |
+| FEATURE | 198 | 20.0% | 83 | 115 |
+| OPTIMIZATION | 20 | 2.0% | 7 | 13 |
+| BUGFIX | 243 | 24.5% | 83 | 160 |
+| REFACTOR | 188 | 19.0% | 66 | 122 |
+| ARCH_ADAPT | 30 | 3.0% | 12 | 18 |
+| INFRA | 68 | 6.9% | 23 | 45 |
+| REVERT | 19 | 1.9% | 3 | 16 |
+| DOC_TEST | 210 | 21.2% | 76 | 134 |
+
+### Phase 1 vs Phase 9 Comparison
+
+Phase 1 only searched main repo with English keywords. Phase 9 findings:
+- BUGFIX: 243 (vs Phase 1's 74) -- dev repo has 2x more bugfixes; Chinese '修复/修正/问题' keywords captured many Phase 1 missed
+- REFACTOR: 188 (vs Phase 1's ~30) -- '整改/清理/重命名' Chinese patterns and dev repo expansion
+- OPTIMIZATION: 20 (vs Phase 1's ~4) -- '性能/优化' Chinese keywords; still small (2%), confirming optimization is done carefully not frequently
+- ARCH_ADAPT: 30 (Phase 1 had no dedicated category) -- 3% of commits explicitly about platform adaptation
+- REVERT: 19 (vs Phase 1's 3) -- dev repo has 16 more reverts, indicating more experimental iteration
+- NEW_OP: 15 (1.5%) -- rare events, each is a major milestone
+- DOC_TEST: 210 (21.2%) -- significant documentation effort, ~1 doc commit per 4 code commits
+- FEATURE: 198 (20.0%) -- the largest 'productive' category; new capabilities on existing operators
+
+### Key Insight: Dev Repo Pattern
+
+Dev repo has proportionally more BUGFIX (66%) and REFACTOR (65%) commits vs feature work,
+suggesting the dev branch serves as the 'first draft' where bugs are caught and code is cleaned before merging to main.
+
+## 9.1.3: Complete Classification Index
+
+### NEW_OP (15 commits)
+
+- [MAIN] `29c513846a` 新增AlltoAllvQuantGroupedMatmul、QuantGroupedMatmulAlltoAllv算子
+- [MAIN] `a9209ec8e2` 新增MatmulAlltoAllA3
+- [MAIN] `a15b323c0d` feat: 新增combine setup&teardown 950 AIV直驱URMA通信方式
+- [MAIN] `d79d17921e` add new ops: alltoallMM; update MMalltoall to support Ascend950
+- [MAIN] `e767c3fb91` add new ops: quant all reduce; update alltoallvGMM&GMMalltoallv support Ascend950
+- [MAIN] `6b31281b82` add new ops: all_gather_mamtul_v2、matmul_reduce_scatter_v2；update all_gather_mamtul、matmul_reduce_scatter、matmul_all_red
+- [MAIN] `b6f4655c2c` 新增MatmulAllToAll/QuantMatmulAllToAll融合算子，注册进框架
+- [MAIN] `04eedcaf26` MmA2A_init
+- [MAIN] `b122ed2221` init
+- [DEV] `31cd7c7a09` 新增CombineV2 A5 host_kfc 分级通信方案
+- [DEV] `fd55c09259` 添加Dispatch Setup&Teardown及Combine Teardown算子框架
+- [DEV] `eed31c1003` 新增dispatch、combine算子支持单机
+- [DEV] `d87c049a25` MmA2A_init_v1
+- [DEV] `40ce84bbd1` Add AttentionToFFN
+- [DEV] `cc982f8c3f` 新增elastic_receivable_info_collect算子
+
+### FEATURE (198 commits)
+
+- [MAIN] `a7256b8132` Dispatch No Quant Cast To HIFP8
+- [MAIN] `d03135b619` [PLZ]aiv直驱dpu代码
+- [MAIN] `3abe7446d0` mc2/allgathermm: add check for m-value
+- [MAIN] `bb9cc9555e` dispatchV2 fullmesh模板新增tiling侧UB buffersize校验
+- [MAIN] `48da354119` MatMulReduceScatter 支持all2all+ vec reducesum
+- [MAIN] `e82c5660e2` Context support fullmeshV2 of dispatchV3/combineV3
+- [MAIN] `2ff654e25a` add_md_moeV3
+- [MAIN] `44cc999cb1` 去掉aclnn冗余校验 & 补充非量化校验mmType和gmmType一致
+- [MAIN] `d594901edf` add ccl buff size check for dispatch and combine
+- [MAIN] `b30c45d546` add error code description
+- [MAIN] `61586a4226` alltoallmatmul A4W4场景int32被校验退出
+- [MAIN] `bb44d77ad3` op kernel of mc2Context
+- [MAIN] `569597d0de` atamm算子新增A3非量化特性
+- [MAIN] `cba3ae92f4` modified the mxquant formula
+- [MAIN] `69178c59c3` gmmalltoallv pertensor 量化特性支持 hif8，kernel 部分代码
+- [MAIN] `8d389da21b` alltoall matmul mx量化 kernel代码
+- [MAIN] `ed2685c64c` quantgmmalltoallv aclnn/tiling
+- [MAIN] `eeb62e6f48` add mxquant scenario md
+- [MAIN] `02eea96579` alltoallvgmm support hif8 pertensor quant mode：Optimization and Rectification
+- [MAIN] `ce6c6a9721` alltoallmatmul A2量化模式，bias可输入空指针
+- [MAIN] `ceea70639c` add mx matmulalltoall kernel
+- [MAIN] `b9896f4166` alltoallvgmm support hif8 pertensor quant mode
+- [MAIN] `5b3aa9f6d5` alltoallmm&mmalltoall add mxquant scenario
+- [MAIN] `1ffefbceb8` add inferGroupSize for mmar mmrs & agmm
+- [MAIN] `5e81cc7801` alltoallmatmulMX量化tiling
+- [MAIN] `dfb8e8df88` 增加matmulalltoall算子mxfp8量化场景tiling代码
+- [MAIN] `7ad74417b9` Distribuebarrier算子支持950
+- [MAIN] `0a9017e33f` dispatch_fullmesh cumsum分核代码
+- [MAIN] `a1d04448d5` [MC2] support the fit-based balance tiling for AllGatherMatmul in 950.
+- [MAIN] `7d4e53a159` alltoallmatmul为PTA适配torch.tensor的int32输入
+- [MAIN] `9cc29aebe5` dispatch & combine 跨超
+- [MAIN] `e426f5a58c` win区dump数据解析工具资料
+- [MAIN] `d29806ac0a` 【A2】Layered CombineA2 TokenNum Upper to 512.
+- [MAIN] `336ffa3e54` MmA2A算子_增加空tensor效验拦截
+- [MAIN] `cc81564f70` [feat] Support 512 Dispatch Layer
+- [MAIN] `f15841991b` add matmul_reduce_scatter_v2 A2 example
+- [MAIN] `021f835262` add error message for invalid quantmode parameters
+- [MAIN] `ce92340895` Dispatch MX Quant Mode Add Saturation Mode
+- [MAIN] `2844ccc3b7` AllGatherMatmulV2算子支持A4W4特性
+- [MAIN] `37ee34fc1f` combine同步等token
+- [MAIN] `92b1a3b78d` quant_reducescatter报错信息打印实际shape和预期的shape
+- [MAIN] `9d2684ca34` allToAllQuantMatmul支持A16W8/A16W4/smoothQuant
+- [MAIN] `6eee6b6309` dispatch_dfx
+- [MAIN] `9ce0840ff8` 空tensor支持
+- [MAIN] `f2dc64c565` matmulalltoall&alltoallmatmul图模式
+- [MAIN] `a75a92e268` perblock量化场景串行修改
+- [MAIN] `9f5201bf03` add quant_reduce_scatter graph
+- [MAIN] `dc9b81412a` alltoallmatmul&matmulalltoall support transX2 not contiguous
+- [MAIN] `648691a4b9` ataKcQuantMatmul:alltoallMatmul动态量化（包含host与kernel提交，各部分均已检视）
+- [MAIN] `9a528dfcf8` MC2 exception dump implementation
+- [MAIN] `2b7aad9265` combineAddRmsNorm适配
+- [MAIN] `57884a9be7` support dfx: mc2_win
+- [MAIN] `1983be65e8` add quant_all_reduce graph
+- [MAIN] `33eb189796` alltoallmatmul&matmulalltoall support empty tensor
+- [MAIN] `2ae20c9f13` add alltoallmatmul.h
+- [MAIN] `f365a34d23` update license and add examples
+- [MAIN] `cc53d81b26` win区dump解析工具
+- [MAIN] `a7a4ce2908` quant_reduce_scatter tiling
+- [MAIN] `a558b7857e` Support A2 Dispatch, epWorldSize <= 8
+- [MAIN] `1fb3429c0b` quant_reduce_scatter kernel
+- [MAIN] `60a38fbbef` quant_reduce_scatter host config
+- [MAIN] `edd2099ff1` 补充过滤脚本遗漏的内容
+- [MAIN] `5625816051` Dispatch Combine 增加A2组网约束
+- [MAIN] `468e17eb2c` dispatch v2 fullmeshv2 support token mask
+- [MAIN] `24239d770b` add ffnToAttention、AttentionToffn
+- [MAIN] `8d92c54242` mc2新特性开发
+- [MAIN] `7ea2095910` 支持分通信域配置hccl buffersize
+- [MAIN] `98680619c2` add a description of supernode
+- [MAIN] `9d7545b930` A2 DispatchV2和CombineV2支持零专家特性
+- [MAIN] `1d91a6c57f` alltoallvgmm/gmmalltoallv tilingkey template
+- [MAIN] `912ce7667b` 故障检测流程中，reset根据是否全卡同步设置batchmode
+- [MAIN] `a812ed71bf` barrier超时检测功能分离 单核做本地计数 其余核做全卡同步
+- [MAIN] `6c7079c131` Add FullMesh Template for DispatchV2
+- [MAIN] `067f767b11` combineV2/ARN 特殊专家场景 x数据类型不一致tiling拦截
+- [MAIN] `ea47405a5c` elastic_receivable_info_collect功能
+- [MAIN] `76f3af8fef` DFX_dataStatus
+- [MAIN] `1f20f8f90d` dispatchV2/combineV2支持超时检测
+- [MAIN] `84dd6e9e76` gmmalltoallv hcclCcTilingConfig入参增加
+- [MAIN] `10e26452c0` elastic_moe_md
+- [MAIN] `6c485f2336` 优化aclnnQuantMatmulAllReduce资料描述
+- [MAIN] `a32675448a` matmulAllreduce非量化场景不支持B矩阵Nz格式，除了310P
+- [MAIN] `b7ff6fa257` fix_add_2dims
+- [MAIN] `3aeb7984e8` add example
+- [DEV] `75a226115b` 增加a2amm精度防护网与遗留问题修改
+- [DEV] `5c21595df5` 使用sizeof计算MC2_TILING_DATA_RESERVED_LEN并将定义挪入框架，屏蔽框架变动对UT的影响
+- [DEV] `8f64e361dc` add AllReduce\AllReduceAddRmsNorm\ReduceScatter st
+- [DEV] `080919f56e` SocVersion(aclnn)
+- [DEV] `d10ed892e7` alltoallvgmm 和 gmmalltoallv aic-aiv 关系配比
+- [DEV] `104df32935` allgather&reducescatter
+- [DEV] `cff95d71f9` add_moe_md_fix
+- [DEV] `02496014c6` add hcom_topo_info.h
+- [DEV] `4419825480` dispatchV2Fullmesh模板支持特殊专家
+- [DEV] `de192c9f00` 线性代数模板库支持int4矩阵乘（tile部分）
+- [DEV] `c9d0ff4b06` dispatch cumsum分核代码补充
+- [DEV] `5da272a7b4` add_operator
+- [DEV] `9d798650c7` 补充芯片版本打桩
+- [DEV] `9641d5a263` AlltoAllMatmul&MatmulAlltoAll增加A5适配example，打开线上验证开关
+- [DEV] `fd8a79f9af` matmulAlltoall KCquant kernel
+- [DEV] `f58df13fda` split elastic function of D&C
+- [DEV] `681d2b1a88` 新算子alltoallmatmul和matmulalltoall的kernel非量化场景实现
+- [DEV] `c598a32c65` add hccl_get_tiling check ret
+- [DEV] `d9480e36f8` mc2/quant_batch_mm: support continuous perblock qbmm
+- [DEV] `255ace7ed9` fullMesh二维mask gatherMask to select
+- [DEV] `5588f3357d` quantReduceScatter支持泛化和三维
+- [DEV] `588e26767e` alltoallmatmul增加quant特性
+- [DEV] `75ed089bb6` fallback support fp4
+- [DEV] `f5170cb203` quant_all_reduce&quant_reduce_scatter改0/1分区
+- [DEV] `3e5fc244d7` MatmulAlltoAll infershape
+- [DEV] `6ca6c25bcd` V_MTE3
+- [DEV] `0d17002e60` 增加量化场景的数据类型匹配情况
+- [DEV] `f31fe0680e` 提交dispatch HOST_KFC 模版
+- [DEV] `993e0d65e7` MmA2A_tilingkey
+- [DEV] `d67b307c6d` add gmmalltoallv alltoallvgmm tiling print
+- [DEV] `0b8356d8c3` MatmulAlltoAll 量化Tiling
+- [DEV] `d5182407d0` add group length validation in aclnn
+- [DEV] `52f2433aa9` alltoallmatmul A2
+- [DEV] `3a95750a5e` empty tensor
+- [DEV] `c4ecc0cfe4` MmA2A_debug_ndev
+- [DEV] `a6825ed6a8` debug aclnn
+- [DEV] `4c8d005cfb` add aclnnQuantMatmul and operater
+- [DEV] `f734d7d834` all2allmm according to quantitative differentiation
+- [DEV] `f76d910364` mmall2all according to quantitative differentiation aclnn and ut
+- [DEV] `f465ca74de` all2all 非量化tiling部分
+- [DEV] `54ecf06ef7` add  ffn_to_attention
+- [DEV] `710f840517` 增加对910B的校验
+- [DEV] `c5fc84bcaf` 补充打印日志
+- [DEV] `40d01f5a1b` MatmulAlltoAll非量化tiling
+- [DEV] `945f60a8e6` tilingkey EPLB and Berrier
+- [DEV] `11cdcddf87` add new op AlltoAllMatmul
+- [DEV] `2c0313ce4d` modify quant_all_reduce debug log
+- [DEV] `3c87c2f076` template_bias_code
+- [DEV] `4eccbd4ea2` V2的A2方案，区分fullmesh和hierarchy epWorldSize约束
+- [DEV] `390cff7bcd` add newop MatmulAlltoAll
+- [DEV] `e5b0ac51d8` 增加确定性描述
+- [DEV] `c827787c9f` quantallreduce算子 aclnn example modified
+- [DEV] `bb7dd4fb17` allgather,reducescatter acln侧拦截校验；allgatherV2空tensor支持
+- [DEV] `1fd164832c` tilingkey for combineArn
+- [DEV] `e1511d7da9` 补充对all_gather_matmul_v2的依赖
+- [DEV] `786e037ebd` QuantBatchMatmulV3适配mxTypePara新格式
+- [DEV] `233cb56736` scale again
+- [DEV] `c52c844e31` modify quant_all_reduce tilingData setting
+- [DEV] `e23596860c` mc2 aclnn.md add A5 example
+- [DEV] `0ccebca2d3` Dispatch分层方案加个MTE3和S的同步
+- [DEV] `396b864ba1` QuantMatmulAllReduce Support CommFp8 补充清零
+- [DEV] `663f91f51f` 限制epWorldSize
+- [DEV] `9ebde18e6d` 增加dispatch&combine A5的v1和v2示例代码
+- [DEV] `fc9930e648` add quantAllReduce kernel
+- [DEV] `bc5110f402` add quant_all_reduce tiling
+- [DEV] `afc497629b` add quantallreduce aclnn
+- [DEV] `8bfa072105` Dispatch & Combine A5支持双页表功能
+- [DEV] `86e69cef4e` QuantMatmulAllReduce Support CommFp8
+- [DEV] `4d54fcb58c` AllgatherMMv2算子的mxfp场景，添加对于右矩阵转置及n=1的校验
+- [DEV] `19487448cb` add quant_reduce_scatter kernel
+- [DEV] `0e5363cfbf` scale1
+- [DEV] `fe4f9df911` A2 dispatch和combine添加常量专家拦截
+- [DEV] `0fb2df78d1` scale
+- [DEV] `2957901066` allgather2 move
+- [DEV] `f45f640f19` add en dir and 确定性计算列表
+- [DEV] `585555e4d4` Dispatch A2 support 384 Rank
+- [DEV] `aa4e50dfcd` 20251117MMAllReduce UT Code Restruct
+- [DEV] `21a9fc5cf9` disptach/combine A3 tiling增加拦截，不支持常量专家
+- [DEV] `487fb9f7bf` combineA5的v2功能补齐
+- [DEV] `13943e439d` add new op quant_all_reduce
+- [DEV] `7513da64cc` quantreducescatter aclnn
+- [DEV] `3926bb2c4d` tiling代码新结构
+- [DEV] `b4ee177957` Barrier超时检测功能分离
+- [DEV] `082ab50e50` mc2CcTilingConfig.SetCommEngine
+- [DEV] `b088b3e41a` aclnn接口调试
+- [DEV] `b00319aba6` add new op quant_reduce_scatter
+- [DEV] `4490ee6b3c` aclnn侧当x2转置时,增加对scale和offset的校验
+- [DEV] `9ea56bb559` matmul_reduce_scatter和batch_matmul_reduce_scatter_allto_all的ophost UT
+- [DEV] `5d3a2decb9` GroupedMatMulAllReduce Kernel UT
+- [DEV] `144337e93f` gmmalltoallv hcclCc support
+- [DEV] `104adc2f36` 增加AllReduce Host侧UT
+- [DEV] `cdaf9421bd` output 空tensor问题增加拦截处理
+- [DEV] `898c62e481` 增加算子信息库
+- [DEV] `7d358f6b04` alltoallv_recsize
+- [DEV] `bb0528b1d3` 补全在pretensor和prechannel下，dequantScaleType=bf16的场景
+- [DEV] `c312b61208` weightQuantMatmulAllReduce对于per_group场景增加拦截校验
+- [DEV] `e54ecd09fd` cumsum tiling计算-tilingData增加CumSumUBMinValue提交
+- [DEV] `c42f0cd993` 修改超时检测超时时间
+- [DEV] `de45740ef9` dispatch&combine weice
+- [DEV] `75a80d4927` MoeUpdateExpert AlltoAllAllGatherBmm infershape
+- [DEV] `480c38fada` matmul all reduce支持bf16类型的dequantScale
+- [DEV] `0eea228834` alltoallv_epworldsize
+- [DEV] `c1c47a1a54` dispatch&&combine support zore、copy、const expert
+- [DEV] `1b800b1622` add_full_musn_v2_dispatchV2
+- [DEV] `54de7f7142` 适配新的UT框架，infershape+inferdatatype UT，GroupedMatMulAllReduce
+- [DEV] `a82b0c28e7` matmulAllReduce & matmulAllReduceAddRmsNorm适配mm的tilingkey改动
+- [DEV] `87ca8e8c5e` update weightQuantMatmulAllReduce tilingKey
+- [DEV] `3e245fb53a` 新增A5支持bias非0描述
+- [DEV] `49fbcc89aa` alltoallv_c_struct
+- [DEV] `32ca17f590` MMallreduce_tiling_key
+- [DEV] `6da5384403` Remove duplicated headers for A5 dispatch/combine
+- [DEV] `bc82b9b8d5` [开源开放]add attention op FIA IFA PFA
+- [DEV] `7a6690c53f` add tiling
+- [DEV] `57e749e39e` alltoallv_h_value
+- [DEV] `4f794eaae3` UT tiling
+
+### OPTIMIZATION (20 commits)
+
+- [MAIN] `2677ff0961` 增加分层模板对于特殊专家 动态缩容 二维mask PerformanceInfo的拦截
+- [MAIN] `2aad8b3e1a` AttentionToFFN performance optimization
+- [MAIN] `ea8f90e1e7` 优化全核同步
+- [MAIN] `81ef492272` dispatch优化syncall
+- [MAIN] `e9830dee12` dispatch、combine算子文档添加performanceInfoOptional
+- [MAIN] `0ee9effe84` AtttentionToFFN 异步场景性能优化
+- [MAIN] `e7b38127ef` mc2 v2 diagnose performance
+- [DEV] `3c1bf883c0` add doc modified of performanceInfo
+- [DEV] `d424993477` dispatch v2 fullmeshv2 support performanceInfo
+- [DEV] `e4cc8ae134` Add new function of performanceInfo
+- [DEV] `5b073e173e` modify opkernel headfile to reduce compile time
+- [DEV] `7b95882405` AttentionToFFN 异步场景性能优化
+- [DEV] `1518062609` dispatch v2 fullmesh v2高性能模板增加支持一维mask
+- [DEV] `147080e527` 同步matmulReduceScatterV2性能优化
+- [DEV] `cbc1c8a008` 二维mask性能优化
+- [DEV] `10ec51e410` MatmulAllReduce: add doc for mixfp8 communication for high performance
+- [DEV] `dccd000155` dispatch、combine 增加性能打点
+- [DEV] `53f3af38de` 二维mask性能调优
+- [DEV] `9375cbc2e7` dispatch v2 fullmesh优化模板代码上库
+- [DEV] `f3e439019d` Combine优化，减少不必要的操作
+
+### BUGFIX (243 commits)
+
+- [MAIN] `156765f359` AlltoAllvGroupedMatmul & AlltoAllvQuantGroupedMatmul TT量化问题修复
+- [MAIN] `a6afc73eae` 修复allToAllMatmul场景，smoothQuant功能
+- [MAIN] `5a9b836aa3` alltoallmatmul&matmulalltoall算子获取整型属性风险整改
+- [MAIN] `f8eb3c9711` fix bug:big shape sync fail.
+- [MAIN] `809fc00e71` mc2: fix output limit check of AllGatherMMV2 and MMReduceScatterV2
+- [MAIN] `35e60a61dd` [问题修复]：当mmX和mmWeight相关参数都不输入时，mmXQuantMode无需判空
+- [MAIN] `5a217f2dcc` fix type bug when using GetAttrPointer
+- [MAIN] `2dc7b20376` Fix Codecheck PR1726
+- [MAIN] `7cd86bcd76` Fix compatibility
+- [MAIN] `9ec2d1dd5a` mc2/allgathermm: fix specification description for v1 and v2
+- [MAIN] `4d9f85f37d` [bugfix] 删除mc2未使用的aclnn头文件&&checker.h重命名
+- [MAIN] `5d02b0bb3e` 修复MatmulReduceScatterV2资料问题
+- [MAIN] `d0fc786543` Fix D/C v3 graph failure
+- [MAIN] `d4c4e5ef07` fix some bug about sum
+- [MAIN] `2bd3ff8c34` 修复静态图mmy空tensor拦截报错
+- [MAIN] `73e01410cb` Bugfix for Dispatch/Combine V3 compile
+- [MAIN] `a7ea11bc9f` fix compile moe_distribute_combine
+- [MAIN] `8a31cb7e21` Fix debug: cross read rdma token
+- [MAIN] `a4ff6d960e` fix: combine teardown编译依赖解耦
+- [MAIN] `37a14ab716` fix debug
+- [MAIN] `27cbe00d8c` fix error compile A5
+- [MAIN] `fb2bcb8b94` fix gmm_apt
+- [MAIN] `65c132d8cb` fix: compile fail
+- [MAIN] `ad0c0a9bca` alltoallmatmul A16W4和A16W8性能修复
+- [MAIN] `a882f8c0a2` alltoallvgmm 修复量化 模板转置问题 & aclnn 共享转置问题
+- [MAIN] `151ca80270` fix combineARN精度问题
+- [MAIN] `d8220538d4` alltoallmatmul 修复文档 aclnn返回值描述修改
+- [MAIN] `f73c0505cc` 输入异常分析
+- [MAIN] `f9d9de0ea7` [mc2] fix readme where 950PR is lost
+- [MAIN] `0162cad4ea` [mc2] fix wqmmar supported data type in pertensor scenario
+- [MAIN] `44338c144d` 修复alltoallmatmul的api校验
+- [MAIN] `1734ac98d3` 修正pr_1711对moe算子的修改错误
+- [MAIN] `d3aa49604b` 修复matmulReduceScatter/matmulReduceScatterV2文档和参数校验更正
+- [MAIN] `a9a251596c` fix alltoallquantmatmul A5 example
+- [MAIN] `9538f565e7` fix the inaccurate description of the aclnn md
+- [MAIN] `3c508d748c` 删除冗余函数，修复在非910b的CANN环境中ut用例执行失败的问题
+- [MAIN] `ac0860f79f` Fix A3 fullmesh bug
+- [MAIN] `096526e61c` 修复mc2算子ut的opapi因打桩变更引起的问题
+- [MAIN] `6131adfce1` fix the inaccurate error description for alltoallmatmul&matmulalltoall
+- [MAIN] `1ceed27530` fix debug for single machine
+- [MAIN] `b268de8fb3` undefined symbol
+- [MAIN] `15eccf0381` 本次PR旨在解决测试程序中环境变量检查逻辑的警告信息指引性不足的问题。当ENV_DEV_NUM环境变量未设置时，原有的通用警告信息无法帮助用户快速定位问题根源和获取解决方案，影响了调试效率和用户体验。
+- [MAIN] `662f162cf8` fix a synchronization issue of dispatch v2 fullmesh
+- [MAIN] `d76a776a52` fix pipe V_S
+- [MAIN] `9691bcc3fb` dispatch v2 fullmesh 2-dim mask fix bug
+- [MAIN] `dfd1838a6a` fix isPerformanceFlag
+- [MAIN] `f91e8dee19` alltoallmatmul修复
+- [MAIN] `4b6e703c64` ffn2attn fix Sync bug
+- [MAIN] `7828263542` fixup bug uint64_t to int64_t for quant_all_reduce
+- [MAIN] `6055045213` alltoallmatmul 修复int4 8卡性能
+- [MAIN] `99342fa483` win区dump解析工具bugfix
+- [MAIN] `d1d95dfb90` [mc2]fix matmul_all_reduce ub conflict
+- [MAIN] `5dce387d87` MatmulAllReduce CommFp8 Sync Fix
+- [MAIN] `3f21ad630c` dispatch v2 fix winIn addr and sync bug
+- [MAIN] `35d0716d84` alltoallmatmul tiling与A4W4性能修复
+- [MAIN] `4f8bc97cb6` fix matmulallReduce
+- [MAIN] `b3ebb5b8db` barrier的example运行出现问题，进行修复
+- [MAIN] `c2d880ba46` Fix SyncFunc EventId Type
+- [MAIN] `c03c66cd5a` dispatch&combine性能打点问题修复
+- [MAIN] `78272790fe` fix AttentionToFFN/FFNToAttention aclnn demo and cmake
+- [MAIN] `99755a1bb8` 【A2】Layered Dispatch And Combine Bug Fix
+- [MAIN] `1c635788c6` fix-debug combine layered
+- [MAIN] `b48e75b7c2` AllReduceMM/MMReduceScatter_fix
+- [MAIN] `dc0a79801e` MC2算子文档修正
+- [MAIN] `90cc4df644` Bugfix: A2 dispatch&combine add SetBlockDim for gentask
+- [MAIN] `7fb813a9ec` dispatch combine v4 demo fix
+- [MAIN] `d8681ad102` fix AttentionToFFN Addr
+- [MAIN] `808679ccbe` 修复issue 265中描述的资料问题
+- [MAIN] `d40b1d16ff` doc fix
+- [MAIN] `ab99ebe61c` docs fix
+- [MAIN] `a4e02b3953` tp issue
+- [MAIN] `942d5acda7` 128P问题gmmalltoallv修复
+- [MAIN] `69bc876ceb` 打印日志修正
+- [MAIN] `2af6508a94` mc2 op_kernel 头文件顺序修正
+- [MAIN] `882e127700` tpRecvCountsShape计算方法修正
+- [MAIN] `4f5aeb897f` mc2 ut kernel fix
+- [MAIN] `c6a0dec30b` 修复README文档描述
+- [MAIN] `23b7944c72` support more ranknum and fix aivnum
+- [MAIN] `f66e305f29` fix md jump link
+- [MAIN] `3037d2825a` 修正mc2下部分example缺失打印信息的问题
+- [MAIN] `6aa4c33cf4` 解决magicValue整数反转问题
+- [MAIN] `c3933b0926` weightMatmulAllreduceFixed
+- [MAIN] `9c461b2571` mc2单词拼写错误修改
+- [DEV] `fb58b43e98` fix matmulReduceScatterV2
+- [DEV] `3c061c5749` barrier example改成双卡之后运行不起来，进行修复
+- [DEV] `70a262adf6` Fix Dispatch and Combine, rank < 8
+- [DEV] `798597da0a` fix dispatch oom bug
+- [DEV] `1fab7bab45` MatmulAllReduce伪量化Tiling GetPlatformInfo错误修复
+- [DEV] `a125659b8e` fix aclnn.md
+- [DEV] `34347d5c37` fix debug, dcci and mte2 sync
+- [DEV] `a3ff13e7c2` dispatchV2、combineV2文档、代码修正
+- [DEV] `7da919d4a2` [mc2]matmulAllReduce fix mxfp
+- [DEV] `a29d723222` md文档格式错误修改
+- [DEV] `c71a40a64f` 暂时关闭opapi ut，待框架修复后恢复
+- [DEV] `6e91c04253` fix special expert and elastic
+- [DEV] `c22d7c92ad` fix matmulAllReduce UT
+- [DEV] `d47678892d` 修正opapi用例
+- [DEV] `f6a3e574d6` cmake修复 - moe_distribute_combine_add_rms_norm
+- [DEV] `faaa5e9686` Bugfix: A2 dispatch & combine Add SetBlockDim for gentask
+- [DEV] `31044c917b` fix DTS
+- [DEV] `8df3325d57` fix allreduce ut
+- [DEV] `514caa09f5` 新算子原型修正
+- [DEV] `12b3902e49` mc2 a5 gentask fix
+- [DEV] `e9ec0142a2` 修复mmallreduce的精度fail的问题
+- [DEV] `6287344f8c` dispatch\combine v4 demo fix
+- [DEV] `935564f1fd` 修复两个quant算子的ut问题，打开ci的ut看护
+- [DEV] `5c701aeef7` fix AttentionToFFN Addr invalid
+- [DEV] `cfac8ab403` CCU Sqe Num Fix
+- [DEV] `56ec691c9f` fix-debug, make the send flag different
+- [DEV] `79af25ffe3` 修复reducescatterv2图模式精度问题
+- [DEV] `ac141d52c1` Fix precision issues of static quant on A5 Dispatch
+- [DEV] `06ac9d9f5d` all_gather_matmul/matmul_reduce_scatter tilingkey修复
+- [DEV] `b2831bc0f2` A5 dispatch combine v2 MTE 方式 win 区修复
+- [DEV] `710ccbe8aa` fix MX_QUANT dynamicscale fail
+- [DEV] `7098f2cee2` fix cmetrics
+- [DEV] `dde680c6f5` 修复mc2编译3-8包编不过的问题
+- [DEV] `651df9ded0` 修复子包与base包包含路径冲突
+- [DEV] `2efc569c47` [DTS2025121803100]oom包内存越界问题修复
+- [DEV] `cbd02341c5` 修正custom模式
+- [DEV] `13a8a1ddca` 修复rank4精度问题
+- [DEV] `0540e51b41` fix AttentionToFFN accuracy
+- [DEV] `6c1b46d893` 更改MatmulAllreduce精度Fail问题
+- [DEV] `aa6aad8796` FFNToAttention H对齐修正
+- [DEV] `5a0210bf2c` 修复A2AMM与MMA2A编译错误
+- [DEV] `71d681fce0` 日志修正
+- [DEV] `7fe18da57f` QuantMatmulAllReduce Fix GetDynamicQuantTempBuffSize
+- [DEV] `ec0365bb0c` fix AttentionToFFN/FFNToAttenttion graph
+- [DEV] `f55d2a35c0` Bugfix for statustensor
+- [DEV] `3c83d55d72` 修复主线barrier_ut问题
+- [DEV] `a692ffe694` 修正fulmesh tiling侧对齐
+- [DEV] `caa5088433` 修复dispatch MX量化场景下部分用例dynamic_scales精度问题
+- [DEV] `4a63cf4bef` fix online compile
+- [DEV] `1eaf5af25f` QuantMatmulAllReduce 拦截逻辑和日志修正
+- [DEV] `8e713a5a20` alltoallmm和mmalltoall算子aclnn对910B报错修改，文档错误修改
+- [DEV] `6719e62427` 修复开源仓issue文档错误
+- [DEV] `7398eb6802` fix combine accuracy
+- [DEV] `ef0af6c75e` matmulallreduce低比特通信和addrmsnorm量化场景bugfix
+- [DEV] `cb629880d1` 修复开源仓issue 265中描述的资料问题
+- [DEV] `39b245e13a` 【bugfix】A5matmulallreudce 在低比特通信下修复datacopy对齐问题
+- [DEV] `53f1920784` 修复文档链接
+- [DEV] `f67f9bfe39` fix op_api_list
+- [DEV] `b305130f44` dispatch fullmesh 代码修正
+- [DEV] `30346ecb45` [mc2]matmulAllReduceV3 print fix
+- [DEV] `5accdd6695` assert bug fixes
+- [DEV] `db3f5932fe` [DTS2025121004359]搬运X数据考虑对齐，防止踩踏后方scale
+- [DEV] `6502ae0073` matmul_all_reduce 拦截逻辑修正
+- [DEV] `cccea2d4fb` 【FIX】del pool
+- [DEV] `780bb3c9e3` fix markdown
+- [DEV] `1288f65f8f` fix name of product
+- [DEV] `6b66cbdadc` fix ARN compile
+- [DEV] `8b7d9daa40` fix add_rms_norm
+- [DEV] `8327d8e28e` fix(mc2 op): clear warning for elastic_receivable_info_collect, elastic_receivable_test, moe_distribute_buffer_reset and
+- [DEV] `677b14caa8` fix mmrs
+- [DEV] `0970ee236e` review意见修改, 之前pr问题闭环
+- [DEV] `44816b5dc1` dispatchV2 打点数据搬出 bug fix
+- [DEV] `65fa18c6a0` fix source links in docs
+- [DEV] `e9f5e4945a` 修复Kernel UT现存的问题
+- [DEV] `705b0528a9` fix format issue
+- [DEV] `609b3295ba` 修复框架ci打桩逻辑，修复mc2 ut问题
+- [DEV] `8351a3062d` fix mm_reduce_scatter_v2 custom compile errors
+- [DEV] `809b164a6f` 【bugfix】MatmulAllReduce修复mxfp4 精度问题
+- [DEV] `eb694aa01b` 修复mc2_example头文件路径
+- [DEV] `9f9bfd88c5` fix mmAllreduce quant
+- [DEV] `1064a387e4` fix bug set comm engine
+- [DEV] `73a82c364c` combinev2用例精度失败修复
+- [DEV] `db554b11c6` fix performance info
+- [DEV] `fb6a84b535` [MC2] fix the round mode of output cast.
+- [DEV] `bfbca7e1e7` fix修复mmallreduce-310P
+- [DEV] `97f88dbdf0` allgatherv2 mxfp异常拦截修复和描述修改
+- [DEV] `d16de17435` 修复末端dynamicScalesTensor越界导致MPU error问题
+- [DEV] `212fdfdf4f` fix EP384 doc
+- [DEV] `ad3daa36c6` [bugfix] 修复mmar在图模式下，空tensor场景没拦截问题
+- [DEV] `1df4ee01a5` dev仓gmmalltoallv算子修正
+- [DEV] `5834cb6c27` 修改Dispatch Combine A5 Tiling中Hccl_Buffer计算公式 & 修复Combine A5流水同步问题
+- [DEV] `1de4ff79ab` fix mm_reduce_scatter_v2 narrowing conversion compile error
+- [DEV] `1ed1e571f3` fix dts：解决QuantMatmulAllReduceV4接口per_block场景，x1是三维时，精度有问题
+- [DEV] `302dc12f57` 修复mmreducescatterv2 mxfp8用例精度问题
+- [DEV] `8204110e7a` 字节通信量限制修正--[2,+++]
+- [DEV] `8f9d58c8dd` fix mm reduce scatter ut compile
+- [DEV] `35b3f1fb42` fix print
+- [DEV] `54d01b27ca` 指定芯片版本，避免平台不匹配导致的错误
+- [DEV] `75b6c2320c` mc2 ut ranksize 修正
+- [DEV] `f816fe53c3` 修复opapi_ut，将failed用例改为校验EXPECT_NE，避免错误码一直变化
+- [DEV] `80cd5d07ef` 解决不同bs情况下的reduce信息问题
+- [DEV] `acd4fed376` torch和aclnn侧对scale的转置处理逻辑不一致
+- [DEV] `2b3e059042` 文档问题修复
+- [DEV] `2d74b19262` fix A5 allreduce_quant
+- [DEV] `248a87334e` docs表述修正
+- [DEV] `f5f2fedb93` barrier资料歧义修正
+- [DEV] `d630e603dc` fixmd
+- [DEV] `1b8eeba163` 128P资料修正
+- [DEV] `096e009b22` dispatchV2fullmesh问题定位修正
+- [DEV] `320632e96b` CombineV2/ARN特殊专家场景tilingKey拦截Bugfix
+- [DEV] `b73faccc28` 修复ut整改时修改错误的头文件
+- [DEV] `8b9f49287d` 修复线上ophost ut的问题
+- [DEV] `f913f28150` fix check HcclBufferSize
+- [DEV] `122f11d9fc` 修复因matmul解耦导致的kernel ut编译失败问题
+- [DEV] `f1500a3c0c` alltoallvgmm拦截问题修复 dtype拦截
+- [DEV] `4eaa119d9f` 修复算子alltoallvgmm A5版本精度问题
+- [DEV] `d2938daec7` 修复combine v2
+- [DEV] `08e81db46c` 恢复dispatch v2 expertTokenNumsType
+- [DEV] `2bb1129592` mc2 op_host op_api ut 修复
+- [DEV] `dbbaf7f223` 字节 128P问题定位修复
+- [DEV] `1f6a9df3bd` op fixed
+- [DEV] `580efee4bb` 修改mxfp场景下对scale的校验问题
+- [DEV] `0bd6d90b1b` buf bug fix and md
+- [DEV] `c49af93fe9` 补充reset算子ut &修复aclnn异常返回值
+- [DEV] `2adfddfdcf` 修复线下编译问题
+- [DEV] `f6a62c3110` fix introduction
+- [DEV] `260fe96496` 修复非量化场景下mmar走错模板
+- [DEV] `3af323ddae` 全量化matmulAllReduce core dump修复
+- [DEV] `ee638d9b32` fix wqbmm tilingkey
+- [DEV] `b41315b3c8` fix WeightQuantMatmulAllReduce Tilingkey
+- [DEV] `17675a9d20` fix dispatch combine magic change to int64 type
+- [DEV] `8fb5839c93` 修改低比特通信卡死以及多轮场景卡死问题
+- [DEV] `9a95bdf59a` fix 资料描述错误
+- [DEV] `a4079872c3` 0930编译告警修正
+- [DEV] `b69e14702a` fix unquant tilingkey bug
+- [DEV] `65acaf5e84` ms allgather 图模式问题单修改
+- [DEV] `acab4f8ae5` 修正examples soc版本不兼容时无拦截问题
+- [DEV] `aa0feec38f` fix unquant mmAllReduce tilingkey
+- [DEV] `fe8c3bab4e` fix inplace_mm_allreduce_arn readme
+- [DEV] `6a3a65d00a` dispatch combine rdv冒烟失败问题修复
+- [DEV] `2315af1889` fix elastic && buf size
+- [DEV] `32d1319548` 修复tilingKey
+- [DEV] `b26b248781` fix norm
+- [DEV] `c7cb0d8469` 修复matmul_all_reduce_add_rms_norm编译问题
+- [DEV] `4a766530fd` mc2告警修复
+- [DEV] `70c8bb8ac6` fix tiling
+- [DEV] `a04366b0e6` fix license
+- [DEV] `ab199ac6b0` DTS2025091503928问题单修改
+- [DEV] `454bad7638` fix vcadd raw instruction
+- [DEV] `bfc7ef0404` fix version
+- [DEV] `2c13a98841` 修复aclnnMoeDistributeDispatch资料对A3 scales描述
+- [DEV] `9c18d0ffd7` fix buffer size
+- [DEV] `a8021f7e55` MC2告警修复
+- [DEV] `5cb903f614` fix fuzz with special experts
+- [DEV] `38d45eb7e2` fix_A5_3rd_qbmm
+- [DEV] `137c5005ca` fix ub dispatchV2
+- [DEV] `1dd7f00884` liushuye修复
+- [DEV] `e6933c4e27` fix buf conflict
+- [DEV] `6d9e65a5af` combinearn fuzz ub越界修复; dispatchv2 tiling修改
+- [DEV] `bb90fa511a` fix include
+
+### REFACTOR (188 commits)
+
+- [MAIN] `f56a2f32c9` D&C V1 Host侧cleancode
+- [MAIN] `e8d52ffb88` [mc2]matmul_all_reduce clean code
+- [MAIN] `a6acd6fcd2` codecheck clean
+- [MAIN] `1bdd7212d6` [aicore]整改
+- [MAIN] `939b8c4403` quantgmmalltoallv para del offset
+- [MAIN] `9047d7915f` Change annotation table
+- [MAIN] `8d66e303ad` Delete PipeBarrier of SendDataToServer
+- [MAIN] `8709a41ab8` The groupSize checking is moved to tiling side and supports automatic derivation as quantmatmul
+- [MAIN] `0889195e4b` 【cleancode】删除分层Dispatch的PipeAll
+- [MAIN] `916aa93c15` combineV2 tiling big function split
+- [MAIN] `8b3cb387e4` modify mxquant formula
+- [MAIN] `2e23c04c33` re_tiling_moe_mc2
+- [MAIN] `0499e9325a` gmm head file after apt change
+- [MAIN] `a851b9d3ba` 将aclnn_*_base.h/cpp文件统一重命名为*_base.h/cpp
+- [MAIN] `aaae312827` [mc2]clean code: clean up some unused/redundant header files, fix some null pointer risks
+- [MAIN] `e347fe617c` 修改quantallreduce&quantreducescatter量化方式缩写
+- [MAIN] `3edec1bbed` 将Inner与Outer移到eprecvCount适配分层方案
+- [MAIN] `77411b7de3` Refactoring of the A2 Dispatch and Combine Hierarchy Scheme on HCCL Buffer
+- [MAIN] `33df96c050` change align size restriction
+- [MAIN] `775356b9f2` [mc2] allgather adjust x1 size
+- [MAIN] `7026d0047c` remove the check of alltoallquantmatmul x1Scale and x2Scale must have the same k-value
+- [MAIN] `ead29fd46d` alltoallmatmul合并核函数头文件
+- [MAIN] `bde6a8b192` mc2 template refactor
+- [MAIN] `04a72243aa` quant_all_reduce&quant_reduce_scatter归一hccl通信结构体
+- [MAIN] `0c3b9b3860` Fix Debug: Min HCCL_BUFFSIZE may result in cleaning bufferId.
+- [MAIN] `f8ca3c8bf5` matmulalltoall&alltoallmatmul图模式修改
+- [MAIN] `a8ef090493` 提炼公共代码到框架，方便其它ut用例重构
+- [MAIN] `6b173d1a46` 将blockDim修改为numBlocks
+- [MAIN] `b2c53b5114` 重构matmul_all_reduce opapi用例
+- [MAIN] `ee7d012508` modify rank_size valid value
+- [MAIN] `7fcdbe14ed` MC2 GEIR from fusion ops to proto
+- [MAIN] `30762d9351` AllGatherMatmulV2算子tilingkey整改
+- [MAIN] `96c775666a` matmul_all_reduce ut用例参数化重构
+- [MAIN] `00aa5aebb0` mv grouped matmul to mc2 directory
+- [MAIN] `05220bd653` update attention_to_ffn&ffn_to_attention
+- [MAIN] `e0a7830d14` update common
+- [MAIN] `59ac7ad84c` Arch编码更新
+- [MAIN] `f11e4d6bf7` dispatch和combine同步至开源仓
+- [MAIN] `14d6e3f032` 删除barrier、combineArn、combineV2和dispatchV2内aclnn内的重复代码
+- [MAIN] `05088f5b7d` Cmertric_clean-GMM 超大函数清理
+- [MAIN] `c2f64f56e5` MC2算子整改(barrier)
+- [MAIN] `c361ba28c9` MC2算子整改(dispatch、combine、update_expert)
+- [MAIN] `05cb5d9a85` Update AttentionToFFN/FFNToAttention License
+- [MAIN] `e13d1ec193` modify datacopy overflow
+- [MAIN] `f826e17cc3` alltoall_allgather_bmm/bmm_alltoall_reducescatter整改
+- [MAIN] `d428f2fe45` 开源仓主线框架测归一
+- [MAIN] `ad30e69c31` remove unnecessary annovations
+- [MAIN] `df1df31e1d` alltoallAllGatherBMM/BMMReduceScatterAlltoall tilingkey模板化修改
+- [MAIN] `8c34a87379` 文档格式整改
+- [MAIN] `18ec6ffcb4` delete docs of detection op
+- [MAIN] `7ab1fa1586` 更新license
+- [MAIN] `33fbd4dd39` 紧急合入  删除oplegacy打桩
+- [MAIN] `d9df547b98` combineArn tilingkey修改
+- [MAIN] `adf46183ac` 修改epWorldSize描述
+- [MAIN] `dc931ecbe6` combine、combineARN常量专家语义参数修改
+- [MAIN] `f6c15f3da1` Dispatch和Combine文档整改
+- [MAIN] `0392ef264f` delete
+- [MAIN] `fbe45cf2df` 修改DispatchV2/CombineARN中MAX_UB_SIZE类型为uint32_t
+- [MAIN] `2b7873015c` 算子支持产品型号更新
+- [MAIN] `898d2fbc5d` moveso
+- [MAIN] `8cd3a86251` 删除v2
+- [MAIN] `9e57c88324` 修改aclnn_all_to_all_all_gather_batch_matmul文件名
+- [MAIN] `3622638bee` CopyRight
+- [MAIN] `d127892f84` update aclnn
+- [MAIN] `26b26b62d3` mc2告警清理和json命名整改
+- [MAIN] `a9f4224206` update md
+- [DEV] `ffe61ca1c1` modify cast overflow
+- [DEV] `94996e024f` 整改产品名称
+- [DEV] `ec0afe59a3` 第二版修改  算子框架接口执行替换
+- [DEV] `eaf6c39613` D&C v1 迁移 v2
+- [DEV] `b133058b1f` mc2 tilingdata 宏定义整改为C结构体
+- [DEV] `36ce98f567` altoallmatmul def change
+- [DEV] `09d11b5e0c` 修改非连续描述
+- [DEV] `69fc51e136` cmertrics_clean-GMM
+- [DEV] `343811024d` 统一agmmv2 resource对象管理，解决507015报错
+- [DEV] `77bef7762d` modify md of quantmm
+- [DEV] `0677799b9e` delete_kernel_ut
+- [DEV] `623d07c66a` alltoallmatmul统一命名风格
+- [DEV] `ef0e96f0f4` 适配hcom接口变更
+- [DEV] `a66fc07aea` 修改删除aclnn重复代码的检视意见
+- [DEV] `6962f6b62c` alltoall_allgather_bmm bmm_alltoall_reducescatter Host侧 CMetrics清理
+- [DEV] `e8f7f719d2` AllGatherMatmul maxUbPingPongSize参数值修改
+- [DEV] `2adeacafe5` tilingkey modified
+- [DEV] `25347217e8` allgathermmV2 tilingkey modified
+- [DEV] `a1266c9326` split quant function of dispatchv2
+- [DEV] `5eb1292cb8` 冒号格式修改
+- [DEV] `4cdb92410c` move map to cpp
+- [DEV] `0258699573` aclnn文档整改
+- [DEV] `9a75bb31d5` MmA2A_modify
+- [DEV] `0572136c80` version isolation
+- [DEV] `c152e22b3e` dispatch算子原型订正
+- [DEV] `fc6f5cfa60` alltoallmatmul tilingkey整改，增加alltoallquantmatmul文档，AIC精度修理
+- [DEV] `e140b6e1fb` split quant function of combinev2
+- [DEV] `93bfafc9bd` update AttentionToFFN flag status
+- [DEV] `7b9c934c51` modify kernel
+- [DEV] `32a842b34b` alltoallAllGatherBMM/BMMReduceScatterAlltoall tilingkey模板化后更改ut
+- [DEV] `e59ba35c91` quant_all_reduce与quant_reduce_scatter重构
+- [DEV] `33d4248c65` 紧急适配  删除oplegacy
+- [DEV] `308908ad39` fix cleancode
+- [DEV] `87abd17ca7` modify x and scales check dim log
+- [DEV] `621b8930ac` dlopen legacy
+- [DEV] `3b632b4f12` 更新licence
+- [DEV] `8447df43cc` modify tensor format check with IsPrivateFormat func
+- [DEV] `39f9fd2003` modify window size log
+- [DEV] `02d4a62d22` （主线）D&C tilingkey整改（A2 3 5）
+- [DEV] `a257f4e055` 静态库适配，tiling注册宏统一
+- [DEV] `e514a98c48` dispatch、combine aclnnV4 打印信息修改
+- [DEV] `024e689442` modify hccl buffer size check func
+- [DEV] `e24e9e2356` delete aclnn tensor format check func
+- [DEV] `55e5282c7a` 解耦3rd中arn的tilingdata
+- [DEV] `ee7c08a47d` change Cast RoundMode to RINT
+- [DEV] `0259b6fc34` matmul_all_reduce mxfp4 review意见修改
+- [DEV] `85cb399609` mm_reduce_scatterv2 tilingkey modified
+- [DEV] `b0bae2968d` 重名变量命名修改
+- [DEV] `25318dd924` tilingkey rectification for redecescatterv2_and_A5_isolation
+- [DEV] `68f5fcb70d` MC2 TilingData整改
+- [DEV] `bce10843f1` mc2 tilingkey rectification for A2/A3 and A5_isolation
+- [DEV] `54ebf10d06` MMAllReduce FP8通信部分检视意见修改
+- [DEV] `3db3e6277d` move moe_distribute_base.h to common inc and delete other same files
+- [DEV] `5114e8562d` mc2 tilingkey rectification for A2/A3（combine，dispatch）
+- [DEV] `f8f038c903` mc2 tilingkey rectification（ MatmulReduceScatter V2）
+- [DEV] `71afccad7e` mm完全解耦
+- [DEV] `3ec314f89c` MatmulAllreduce tilingKey整改【A2+310P】
+- [DEV] `03705f469a` all_gather_matmul/matmul_reduce_scatter tilingkey modify
+- [DEV] `855265da42` modify quant_all_reduce variable
+- [DEV] `07fe35b142` 常量专家返回值修改
+- [DEV] `1e9a3874ee` tilingkey模板化
+- [DEV] `8d61739104` change double to int
+- [DEV] `2cb9d620fd` 同步遗漏的matmul_reduce_scatter_v2修改
+- [DEV] `e8272d8c61` 修改tiling校验以支持EP384
+- [DEV] `42c924b935` Dispatch CombineV2的aclnn描述修改
+- [DEV] `2658de7e80` update allreduce archx 3rd include
+- [DEV] `423ee3aecb` 删除通信引擎配置
+- [DEV] `7112ae6d92` 修改aclnn不合理日志
+- [DEV] `7da8a6e8cb` move mm_reduce_scatter_v2 to gitcode
+- [DEV] `a109a98e3f` delete tiling file
+- [DEV] `7df9cdde3e` nsa-select-attention-infer to nsa-selected-attention-infer: rename
+- [DEV] `96a54c1ecd` change Mc2mmv3 kb
+- [DEV] `5c747cc9c2` readme dispatch combine整改
+- [DEV] `04edb55b66` ut opapi目录整改&ut cmake格式整改
+- [DEV] `11ebc22a10` 打印日志修改
+- [DEV] `7242593f1d` 迁移 kernel ut
+- [DEV] `74ff725397` 解耦
+- [DEV] `a7cc8dc61b` mc2_3rd与nn仓解耦
+- [DEV] `cae0ec6f34` AICPU Dispatch magicValue change int32_to to uint64_t
+- [DEV] `4e0d68cd15` LocalWindowCopy delete PipeBarrier<PIPE_ALL>
+- [DEV] `8ee006bfe1` 删除函数ScaleOffsetProcessOpti
+- [DEV] `1e014f8b24` transformer仓ut重构适配
+- [DEV] `61bf335766` 适配mmv3修改
+- [DEV] `d1d3eee37d` mc2 moe_distribute_dispatch和combine op kernel Ut迁移
+- [DEV] `6e1e6c55c1` issue54修改
+- [DEV] `9efb2f587c` mc2 moe_dispatch/combine_ophost_infershape UT迁移
+- [DEV] `b775c20d28` mc2 moe_distribute_dispatch/combine ophost_tiling UT迁移
+- [DEV] `3910bfb03e` mc2 dispatch/combine opapi UT迁移
+- [DEV] `a83c2d36fa` 928修改单词拼写错误
+- [DEV] `5a29b20ccf` Copy Right
+- [DEV] `2f0e3d096f` mc2告警清理
+- [DEV] `9b07bfe23e` modify allreduce修改
+- [DEV] `2c3d5336ea` modify warning
+- [DEV] `00f95a7db3` change_cce
+- [DEV] `ef4ee1d017` transformer仓告警清理，幽灵数字
+- [DEV] `3b092eb449` change-op-problem
+- [DEV] `df28141618` cleancode
+- [DEV] `92299d50f3` 删除冗余allGatherMM kernel
+- [DEV] `44ec62954f` rm ops_error.log
+- [DEV] `d4c4700746` cleancode代码整改
+- [DEV] `fd28a87cc1` 修改代码中单词拼写错误
+- [DEV] `a3684baa80` rename
+- [DEV] `6a045ca956` cy_clear_code_924
+- [DEV] `7f308bb61e` update qbmmv3
+- [DEV] `69335360a1` clean_code_2
+- [DEV] `8562c89bb0` cleancode_const
+- [DEV] `4e1d5a8c64` delete unused func parameters
+- [DEV] `3c45e036e8` mv graph_plugin to op_graph
+- [DEV] `8e127f8cb5` 合并MC2算子  线下单算子部分
+- [DEV] `c190d5f08e` cleancode matmul_all_reduce_x
+- [DEV] `b33491f870` clear code
+- [DEV] `00421d4d81` change tiling format
+- [DEV] `0a74481726` AllGatherMatmul 迁移
+- [DEV] `09bdd45c4b` update for clean code
+- [DEV] `71eb09a114` rm json source file and download json while compile
+- [DEV] `fdddae53cc` Mv mm_allreduce_x
+- [DEV] `e87f438906` combineV2 dispatchV2 tiling拦截修改
+- [DEV] `b38765227f` 删除mc2算子多余kernel文件
+- [DEV] `76966ea34c` moe dispatch & combine & dispatchv2 & combinev2 & updateexpert & combineARN
+- [DEV] `ac73c9e627` hcom接口解耦
+- [DEV] `ab8edc2d79` delete  target-link opapi
+- [DEV] `050122c0f9` final target update up ops-transformer/master
+
+### ARCH_ADAPT (30 commits)
+
+- [MAIN] `460c6f48f9` aclnn_quant_grouped_mat_mul_allto_allv  SocVersion整改
+- [MAIN] `4da9f907c5` alltoallmatmul算子A5npuarch芯片号更改
+- [MAIN] `025e00f7d5` adapt 3101 to 3510
+- [MAIN] `57addf003d` MatmulAllReduce A5 Use Mc2InitTiling & Mc2CcTiling
+- [MAIN] `84ef7bb3af` MatmulAllReduce CommFp8 Adapt CCU All2All DataCnt Limit
+- [MAIN] `36391f24a4` (register)replace socversion with npuArch
+- [MAIN] `0fec6c47eb` MatmulAllReduce A5 Use mc2InitTiling and mc2CcTiling
+- [MAIN] `af754eceec` 对mc2算子的ut用例进行代际隔离
+- [MAIN] `17de35a6c2` (tiling+gentask+infershape+register)replace socVersion with npuArch
+- [MAIN] `49af78d0a0` dispatch v2 适配 fullmesh
+- [MAIN] `bf801a31d8` alltoallquantmatmul aclnn add A5 adaptation
+- [MAIN] `3d375e7ca9` allgether/reducescatter 适配
+- [DEV] `7ee73517c6` mc2 op_tiling文件芯片代际隔离
+- [DEV] `4743e736f9` Example支持代际隔离
+- [DEV] `c237d5c5f9` dispatch & combine v1 切换 MTE 通信
+- [DEV] `86e4ad55c3` allgather/reducescattermatmul A5适配
+- [DEV] `66ac27844a` dispatchV2 infershape适配
+- [DEV] `ac4676c541` Dispatch A5 MTE通信方式支持静态量化、PERGROUP量化、MX量化模式以及量化分支拆分
+- [DEV] `aa98217e00` mma2a HCCL SERVER TYPE AICPU->MTE
+- [DEV] `0a31e6d40f` eplbA5
+- [DEV] `c344e4a758` dispatch & combine v4 aclnn ccu 适配
+- [DEV] `b377e59b7d` allgathermatmulv2 a2与a3平台代码迁仓
+- [DEV] `fce99a7003` dispatch combine v2 支持 MTE 通信
+- [DEV] `fdc3936338` 【开源开放】适配开源编译A5-dispatch算子
+- [DEV] `e5b2dcd8be` 静态图all_gather_matmul_v2 matmul_reduce_scatter_v2适配
+- [DEV] `4bc05ae6b5` 对matmul_all_reduce执行代际隔离
+- [DEV] `a31d981b02` Dispatch A5 generalization
+- [DEV] `d0aa78122e` Dispatch&Combine CCU适配
+- [DEV] `2ac92f02f7` ccu适配
+- [DEV] `00934c4d50` dispatch A5 V2接口适配
+
+### INFRA (68 commits)
+
+- [MAIN] `0591acfad5` 废弃AlogCheckDebugLevel接口，使用CheckLogLevel替换
+- [MAIN] `e7805f5c90` alltoallvgmm算子hccl v2 接口替换
+- [MAIN] `8f3a574750` 修改整仓错误链接及错误产品名称
+- [MAIN] `14b7a4cf95` MC2 dump implementation 编译宏
+- [MAIN] `218a8edfd6` arch35gentask stub for compiling master with c25 toolkit
+- [MAIN] `3816e3ef24` MC2 SetScheduleMode
+- [MAIN] `96dd6a112a` 清理编译告警
+- [MAIN] `17beabaeae` MatmulAllReduce相关算子aclnn资料补齐算子源码链接以及产品支持情况。
+- [MAIN] `b2683f8577` synchronize MD from dev
+- [MAIN] `6334ca5437` build.sh 同步example ut 分soc执行
+- [MAIN] `db76bed486` A5静态图接口适配
+- [MAIN] `1e52985956` 开源仓添加编译选项
+- [MAIN] `43749026e9` mc2适配hccl接口变更
+- [MAIN] `d8e8c382ae` opapi_math 替换opapi.so
+- [MAIN] `6916b369a5` 匹配最新cann版本，更新编译选项
+- [MAIN] `a07e0b56a4` 适配修改dispatch oom编译宏变量名
+- [MAIN] `391807399b` 增加zh路径，修改对应算子说明链接
+- [MAIN] `32020dffdf` mc2 opapi目录切换else
+- [MAIN] `56fbb487d2` 1029 开源仓同步 opapi目录切换
+- [MAIN] `be2a4cbaa8` distribute combine ARN built-in graph func release
+- [MAIN] `a278852247` Merge branch 'master' of git@gitcode.com:wuyao51511/ops-transformer.git into 'master'
+- [MAIN] `f8bce65559` mc2 gen task 线下编译静态图算子功能
+- [MAIN] `3e3039fcfb` 编译告警清理-shadow
+- [DEV] `01399a4f6e` HCCL 通信结构体 win 区数组大小调整
+- [DEV] `13de8b2bac` replace block dim with num blocks
+- [DEV] `6fbfe7c87d` custom build in
+- [DEV] `9a4b07e4e1` 通信结构体切换新的
+- [DEV] `22dd7d6edc` allgather/reducescatter 编译
+- [DEV] `2e94d61b0a` 修改allreduce scheduleMode
+- [DEV] `dd202097f2` MC2增加编译选项 第一版
+- [DEV] `4793589726` 设置reducescatterv2 和 allgatherv2 scheduleMode
+- [DEV] `af7702f790` 静态图接口切换
+- [DEV] `c5d70bb8fd` dispatch_v2_fullmesh支持elasticinfo输入
+- [DEV] `a1e4fe3a38` 适配3-8包编译逻辑，暂时不修改hccl接口
+- [DEV] `194b3a49e3` 配合hccl接口变更，修改mc2代码
+- [DEV] `a240b8cfe9` hccl move 3rd
+- [DEV] `909da235ce` tiling 宏
+- [DEV] `fb5577c4a4` 静态库编译适配代码
+- [DEV] `fd0abb43ac` custom compile
+- [DEV] `b0cb6f4807` 3rd安装kernel依赖项
+- [DEV] `08dee71dc1` add source file links
+- [DEV] `3fb21335fc` Add Gentask For Mc2
+- [DEV] `96bfc97111` HCCL FOR TILING
+- [DEV] `f17bdca6f2` Modify dispatch&combine tiling for independent group hccl buffersize configuration
+- [DEV] `5b430e526e` support sub pkgs build
+- [DEV] `bbf276d91f` opapi
+- [DEV] `5b99157e02` 删除tiling阶段不存在的编译宏，恢复910_95的编译
+- [DEV] `7d353ba9df` 移动opapi位置
+- [DEV] `2916b58de2` distribute combine ARN built-in静态图功能放开
+- [DEV] `39c88b2070` DistributeBarrier support new features: elasticInfo and timeOut
+- [DEV] `e562aaabc2` matmul_reduce_scatter和batch_matmul_reduce_scatter_allto_all的opapi UT
+- [DEV] `ad5e50384a` 删除原先避免test重复编译的临时方案
+- [DEV] `644f3a7fef` op_api of gmmalltoallv && alltoallvgmm
+- [DEV] `d6abc2ac44` mc2 dcci裸指令修改
+- [DEV] `d638c36454` matmul_reduce_scatter/batch_matmul_reduce_scatter_alltoall算子opapiUT
+- [DEV] `ce5840cc42` 采用宏隔离的形式 在编译阶段拦截不同型号的example
+- [DEV] `bda43df0a7` 0929编译告警清理
+- [DEV] `1c09fd4aca` mc2 gen task built in线下验证
+- [DEV] `3a4b6b45b2` 编译告警清理
+- [DEV] `d833ddda3b` 编译框架适配MC2 ut
+- [DEV] `1eb9cf2415` build_allreduce
+- [DEV] `69a18a93fc` gen task 线下自定义算子编译验证
+- [DEV] `ae791f46f3` mc2编译框架优化
+- [DEV] `5fd48ccac6` moe算子线下编译放开
+- [DEV] `b7d5b2d32b` combine A5适配V2接口
+- [DEV] `2b07660790` mc2 build-in编包支持
+- [DEV] `fd77d0291b` all_gather_matmul注释线下编译
+- [DEV] `2c76d78101` gmm_alltoallv回黄编译
+
+### REVERT (19 commits)
+
+- [MAIN] `349083a79b` Revert "修改了all_gather_matmul算子ut的op_host组件的用例输入方式，改成csv表格"
+- [MAIN] `8ade8c3e3b` Revert "dispatch优化syncall"
+- [MAIN] `e5988e2b80` revert
+- [DEV] `28a4126215` dispatch cumsum分核功能代码回退
+- [DEV] `f99a34dd07` 回退mm_rs优化
+- [DEV] `aee3fb63e8` Revert "MC2 TilingData整改 "
+- [DEV] `a2b032dcb2` Revert "tilingkey rectification for redecescatterv2_and_A5_isolation"
+- [DEV] `58a7ef184e` Revert "mc2 tilingkey rectification for A2/A3 and A5_isolation"
+- [DEV] `20f4d5412b` Revert "mc2 tilingkey rectification（ MatmulReduceScatter V2）"
+- [DEV] `8ead68ccfa` Revert "mc2 tilingkey rectification for A2/A3（combine，dispatch）"
+- [DEV] `2001261f7c` Revert "MatmulAllreduce tilingKey整改【A2+310P】"
+- [DEV] `d7f4f5345f` 回退A2和A3关于Combine常量专家描述
+- [DEV] `7d048b140e` QuantMatmulAllReduce Support CommFp8回退
+- [DEV] `58b03721dc` ccu_out_回退
+- [DEV] `1ff006a430` Revert "aclnn接口调试"
+- [DEV] `3140d5a245` Revert "mc2_3rd与nn仓解耦"
+- [DEV] `c2aa793952` 回退图模式output空tensor拦截
+- [DEV] `02505c922e` revert unquant mmv3 tilingkey
+- [DEV] `05c16e686c` Revert "fix include"
+
+### DOC_TEST (210 commits)
+
+- [MAIN] `e8456da707` 补充quantgmmalltoallv算子文档
+- [MAIN] `55856eb15c` 易用性需求：资料类修改不触发CI
+- [MAIN] `5d50c4ae59` alltoallquantmatmul complete the aclnn ut test cases
+- [MAIN] `aee1f894e0` add deepep doc
+- [MAIN] `25ed17ca29` 补充alltoallmatmul算子UT测试
+- [MAIN] `e2004aa580` [mc2]modify aclnnQuantMatmulAllReduceV4 doc
+- [MAIN] `09d1170e4d` add ut for aclnn in the mxquant scenario
+- [MAIN] `8a88dd6ff0` Add context as an input to dispatch/combine
+- [MAIN] `69eb711f76` Update Disppatch/Combine V3/V4 docs
+- [MAIN] `32862fa142` combineAddRmsNormV2资料修改
+- [MAIN] `e983cac26d` add moe_distribute_combine_teardown
+- [MAIN] `6334985339` add moe_distribute_combine_setup
+- [MAIN] `c473a9198d` 新增MoeDistributeDispatchTeardown算子host侧实现
+- [MAIN] `738497cd70` 新增MoeDistributeDispatchSetup算子host侧实现
+- [MAIN] `ea1c14d95b` 优化mc2下部分注释内容
+- [MAIN] `bd618b6014` 修改公共文档描述
+- [MAIN] `e89311f4ae` MC2算子资料修复
+- [MAIN] `2e3ab41143` Update Dispatch/Combine docs
+- [MAIN] `a8f043187e` 修改接口文档格式错误问题
+- [MAIN] `8aacc22faf` combineAddRmsNorm算子资料与示例代码修改
+- [MAIN] `a143b03836` MmA2A算子资料_更新161002错误码的涵盖范围
+- [MAIN] `cc85a74e8f` 修改了all_gather_matmul算子ut的op_host组件的用例输入方式，改成csv表格
+- [MAIN] `fd0ed91f81` Change Doc, single machine dc
+- [MAIN] `658e594744` A2 MoeDistributeDispatchV2 Support <= 256 Moe/PerRank, when epWorldSize <= 8
+- [MAIN] `ec41272fc3` 补充AllGatherMatmulV2 A4W4资料
+- [MAIN] `2d05412ee3` quant_reduce_scatter资料和报错信息区分二维时BS与三维时B*S
+- [MAIN] `ce04d3e610` doc: sync document for AllGatherMatmul
+- [MAIN] `27b24aff3e` 同步双通信域算子文档
+- [MAIN] `f853e62ae4` MatmulReduceScatter文档同步
+- [MAIN] `f42d660794` A5expert,barrier算子dev仓资料移至开源仓
+- [MAIN] `06869f7ab3` quant_reduce_scatter和quant_all_reduce资料修改，增加通信域约束
+- [MAIN] `7c9641a579` [mc2] weightQuantMatmulAllReduce doc modify
+- [MAIN] `adafaef21d` Update AttentionToFFN/FFNToAttention docs
+- [MAIN] `2cf2d7b63e` 文档修复
+- [MAIN] `020a767b3d` docs文档同步修改
+- [MAIN] `5f9a672906` dispatch&combine资料修改
+- [MAIN] `21c0a5ccb3` matmul_all_reduce ut用例参数中增加对芯片版本的支持
+- [MAIN] `033acdbdfc` combineAddRmsNorm资料修改
+- [MAIN] `b115d19928` 对mc2算子ut文件进行整改：包括命名风格、缩进和花括号使用等格式问题和一些导致构建错误的语法问题
+- [MAIN] `6b476886e2` MmA2A_算子描述文档更新
+- [MAIN] `8192e64408` quant_reduce_scatter ut
+- [MAIN] `c1ab22a8a4` dispatch&combine v3 v4接口资料修改
+- [MAIN] `84a0ccebfd` dispatch文档修改
+- [MAIN] `3127f77c53` close mc2 opapi ut
+- [MAIN] `2d6722f5d8` Fix doc error about NZ format support for MatMulAllReduce
+- [MAIN] `5be4d6c57d` attention_to_ffn/ffn_to_attention文档改正
+- [MAIN] `8de0be3376` update docs
+- [MAIN] `775e8eb3b4` docs文档修复
+- [MAIN] `2d2b3feb84` combinev2文档添加返回码
+- [MAIN] `7a076d412b` dispatch combine资料修改
+- [MAIN] `506afd36c0` moe_distribute_combine_add_rms_norm 头文件修正
+- [MAIN] `d0d8e1b8e4` 修改文档描述问题
+- [MAIN] `4be336c871` moe_update_expert and distribute_barrier tilingkey修改
+- [MAIN] `a8ac47bb23` issue of combineARN docs
+- [MAIN] `56b05626cb` aclnnAllGatherMatmul算子资料修改
+- [MAIN] `28ee37ef36` HCCL_BUFFSIZE docs fixed
+- [MAIN] `e416eec804` MoeDistributeDispatchV2 A2算子不分层添加单卡Moe专家校验
+- [MAIN] `bb6b6b735b` combine/dispatch example support A2&A3
+- [MAIN] `a853492f8a` 解除matmulAllReduce的example中对transMatmulWeight算子的依赖
+- [MAIN] `61f544c09e` 修改MC2文档中表格间距、表述模糊等问题
+- [MAIN] `b6da9b43b0` docs supplement
+- [MAIN] `20ba9bcc10` 修改collect文档
+- [MAIN] `0843f69c51` reset检测算子文档删除detection逻辑，保留reset单算子用例
+- [MAIN] `602f588eb7` docs fixed
+- [MAIN] `658993201e` 优化readme易用性
+- [MAIN] `76f7605a7c` README 文档修复
+- [MAIN] `9e11e3c3e7` barrier资料修改
+- [MAIN] `38b758a0d1` Add documentation, kernel, and configuration items for the test operator
+- [MAIN] `77a8929f75` 新增moe_distribute_buffer_reset
+- [MAIN] `1cfcb36973` MC2 ut
+- [MAIN] `c05e6505ae` Barrier支持故障检测新增elasticInfo和timeOut可选输入
+- [MAIN] `6a79e69d26` allgathermatmul example
+- [MAIN] `4b3d29a2f0` mc2文档格式修改
+- [MAIN] `45bbbf12e6` 修改了MoeDistributeCombine、MoeDistributeDispatch、MatMulAllReduceAddRmsNorm README文档
+- [MAIN] `780fe236d5` dev仓mc2_doc同步
+- [MAIN] `46e19caafd` add dispatch combine docs
+- [DEV] `2b5251c412` 添加matmulalltoall算子至op_list.md
+- [DEV] `d93f443b5b` 删除 matmulAllReduce低比特通信用例
+- [DEV] `1f3d6f8f5b` ut支持哈希tilingData
+- [DEV] `b55d5933ec` moeUpdateExpert文档及示例代码更新，Dispatch&Combine文档增加A5示例代码
+- [DEV] `12aabb3733` 开启--cce-auto-sync=off
+- [DEV] `0bd0fcffe6` modify DispatchV2 doc, fullmesh v2
+- [DEV] `6a1a98db8e` dispatch combine v1 切换 MTE 后资料修改
+- [DEV] `3af53c81d8` opapi用例执行完后默认回到910b
+- [DEV] `a250e5d0e3` 修改文档中环境变量名
+- [DEV] `19fee99686` 【DTS2026011428339】删除1.13--cce-auto-sync=off修改
+- [DEV] `483fdd6820` 设置ut芯片版本打桩
+- [DEV] `492342b4fb` 修改mmar资料
+- [DEV] `fff4904650` 调整mc2_ut开关
+- [DEV] `c0454e7ed8` QuantMatmulAlltoAll补充ACLNN UT用例，修改部分参数校验和初始化
+- [DEV] `d340e84509` modify_mmA2A_doc
+- [DEV] `964d9adcfe` MMAlltoAll增加ut用例，修改aclnnInner传参方式
+- [DEV] `78d0892ccf` AlltoAllMM增加ut用例，增加shape校验，修改all2alloutflag初始化
+- [DEV] `0aa2c25dd7` quantReduceScatter支持泛化和三维，对应资料文档修改
+- [DEV] `e099d7ebaf` 修改quantreducescatter资料
+- [DEV] `8316623b65` 开启example
+- [DEV] `c885b408cd` aclnn资料中，x1scale支持的维度修改
+- [DEV] `53e1a79383` mc2 docs文档优化
+- [DEV] `6401f2d638` dispatchV2fullmeshV2支持可变bs与一维mask资料修改
+- [DEV] `8e5e1ecdeb` mc2算子ut框架修改，infershape支持ranksize打桩，hccl打桩文件从mc2的common挪到tests下的common
+- [DEV] `d6b09efd68` example适配HCCL接口
+- [DEV] `9e2d0f9223` 修改combine和dispatch的example，使其支持双卡
+- [DEV] `6ab660803b` modify aclnn docs
+- [DEV] `211500c713` distribute_barrier的ut中，tilingdata的ubsize不校验
+- [DEV] `ce81a25af4` aclnn_moe_distribute_dispatch_v4头文件fix
+- [DEV] `c9848c4f95` combine资料fix
+- [DEV] `13e2e6a64d` doc文档补充
+- [DEV] `a8700c8ac0` opapi文档替换opapi_math
+- [DEV] `527dfd6906` mc2资料修改
+- [DEV] `6b7fbaa186` [mc2]doc modify
+- [DEV] `f734cb3093` dispatch&combine v4资料修改
+- [DEV] `17f1a5c5ad` dispatch and combine ut 补充
+- [DEV] `3beebfec84` dispatch combine支持grouptp传空资料修改
+- [DEV] `78f67ad66b` modify header path to support ut
+- [DEV] `f76684ce43` modify check input dim func
+- [DEV] `db102bbd14` readme modified
+- [DEV] `20ca057d3c` matmul_all_reduce x2最后一维限制65535 注释补全
+- [DEV] `37846fd7eb` Author: Yang Zeheng
+- [DEV] `0073980ef6` Optimize matmul_reduce_scatter_v2 operator for small M dimension inputs
+- [DEV] `71b34836d7` allgathermatmul及matmulreducescatter算子A5调用分支及aclnn资料修改
+- [DEV] `f633fd7c73` dispatch fullmesh 参数限制tiling及资料修改
+- [DEV] `21b3f9f6e0` moe_distribute_dispatch_v2_full_mesh.h文件修改 master分支
+- [DEV] `e5eda42778` [mc2]matmulAllReduce doc modify
+- [DEV] `a6918f2a8a` Update Dispatch/Combine docs for commAlg
+- [DEV] `fc8e40735a` Add optimization of matmul_resduce_scatter_v2 for small M input.
+- [DEV] `af4ec203a4` 补充AllGatherMatmulV2 ophost opapi UT用例
+- [DEV] `3805593f73` 修改资料,增加README文件
+- [DEV] `aff2b267a3` 补充MatmulReduceScatterV2 ophost opapi UT用例
+- [DEV] `c15703d2dd` allreduce资料修改
+- [DEV] `d191a16fc9` Update A5 MoeDistributeDispatchV2/CombineV2 docs
+- [DEV] `c3e064ae9e` [material] add README for QuantAllReduce
+- [DEV] `cd5a02d4a0` 修改aclnn文档
+- [DEV] `5b8701b484` a5 mc2算子示例修改
+- [DEV] `1b9080e473` AllGatherMMV2&&MMReduceScatterV2 mx资料补全
+- [DEV] `7f41ca2e5c` add doc for mixfp8 AllGatherMatmulV2&MatmulReduceScatterV2
+- [DEV] `a5c86d82b6` 修改dispatch和combine的A5示例代码头文件路径
+- [DEV] `2ecee98a5d` add sync after LocalCompute to solve accuracy issue
+- [DEV] `bfd0e2bd3d` Co-authored-by: lyt_claire<luyitong1@huawei.com>
+- [DEV] `8311b0ab29` dispatch&combine aclnnV4接口资料、注释修改
+- [DEV] `7984ae1d27` 资料问题整改
+- [DEV] `3b657f5928` 调整MoeDistributeDispatchV2 README.md描述
+- [DEV] `a5787e72cf` Update Dispatch/CombineV2 docs for A5
+- [DEV] `0913e4890d` 资料修改+更改dispatch和combine中localmoeExpertNum的约束
+- [DEV] `0b57dae0a0` combine常量专家语义参数资料修改
+- [DEV] `9911cbf384` tiling拦截localmoeNum>128+资料修改
+- [DEV] `6f9ef5d0ca` add ep384 doc
+- [DEV] `83ae11e713` ub_out_combine_v2
+- [DEV] `f0312e1e14` ut补充3rd和common的编译
+- [DEV] `bd2830fb18` combine、combineARN以及dispatch常量专家代码及资料修改
+- [DEV] `d65fb5e018` Dispatch和Combine文档易用性
+- [DEV] `467f82a988` tiling ut hccl rankNum打桩
+- [DEV] `99634d96fd` dispatch_v2 资料修改
+- [DEV] `8ee6522ad5` opapi测试时，使用源码中的aclnn接口而不是CANN环境中的
+- [DEV] `76612a4ad9` ccu_out
+- [DEV] `c8441f515f` hccl buffsize资料修改
+- [DEV] `5f90abf1b8` modify ut cmakelist
+- [DEV] `161f433ca1` 撤掉dev仓example关于芯片版本的拦截
+- [DEV] `a115da3fdf` aclnnBarrierV2资料修改与demo修改
+- [DEV] `0ad3dfe3ee` docs fixed for DTS
+- [DEV] `baf3b0ff84` mc2 ut框架参数扩展
+- [DEV] `7f36943065` MoeDistributeDispatchA2 v2接口 FullMesh最大支持专家数24
+- [DEV] `1c20b5efd1` allto_all_all_gather_batch_mat_mul & batch_mat_mul_reduce_scatter_allto_all 补充 kernel ut
+- [DEV] `92f1403f78` mc2 kernel ut
+- [DEV] `58178dc63f` MatmulAllReduce and MatmulAllReduceAddRmsNorm and InplaceMatmulAllReduceAddRmsNorm kernel UT
+- [DEV] `72618b40a1` mc2 ut api modify 适应框架调整
+- [DEV] `a60aa4934d` MoeDistributeBufferReset算子资料
+- [DEV] `0937ea9549` collect算子文档及UT
+- [DEV] `142d04888c` 完善aclnnMoeDistributeDispatchV3文档参数说明
+- [DEV] `6a494c1c33` A2 dispatch combine 文档修改 x_active_mask 仅在fullmesh场景
+- [DEV] `7aaa23fec8` aclnn文档添加无moe限制
+- [DEV] `76bd1be84b` Barrier aclnn文档缩进
+- [DEV] `9a72c6de77` moe_distribute_combine_add_rms_norm opapi and ophost
+- [DEV] `0b62aff35e` add op's UT of test
+- [DEV] `effab85a0a` MoeDistributeBufferReset算子新增
+- [DEV] `60ec24e8e7` LOCAL_STREAM_MAX_NUM改回19 并对barrier注释进行纠正
+- [DEV] `3c68b25e85` add op's docs of test
+- [DEV] `b74014c3ca` combineV2 and dispatchV2 ut infershape
+- [DEV] `a227b27d09` 按新格式补充Barrier UT测试用例
+- [DEV] `04f183ba16` add test op
+- [DEV] `fb83f6b3b6` all_gather_matmul等共三个算子的ut
+- [DEV] `e779143462` mc2文档格式问题修改
+- [DEV] `5244e3b1bf` combineV2 and dispatchV2 op_api ut
+- [DEV] `f382b0ce79` all_gather_matmul tiling ut
+- [DEV] `c60ea54f6f` moe_update_expert/allto_all_all_gather_batch_mat_mul api UT支持
+- [DEV] `08436d2745` ut support infer_datatype/infer_shaperange
+- [DEV] `32b220317c` ut grouped_mat_mul_all_reduce
+- [DEV] `cb2d2632ad` distribute_barrier opapi ut
+- [DEV] `6070cc1f8d` fix资料前后矛盾
+- [DEV] `de89bb6ca8` MC2moe算子UT支持
+- [DEV] `a92cf5c7b5` support mc2 tiling ut
+- [DEV] `96c9c4c902` distribute_barrier ophost ut
+- [DEV] `a503bda799` 资料修改
+- [DEV] `cee47b5ca9` MoeDistributeDispatch Reduce Info方案优化
+- [DEV] `f85c11504a` aclnn资料修改
+- [DEV] `f8e36bca42` mc2 doc 格式问题修改
+- [DEV] `ea923a60bf` MC2 doc修改
+- [DEV] `4741daf1b1` tyf_base_example
+- [DEV] `649dbf744c` all_gmm, mm_reduce_scatter, moe_dis_combine_arn example
+- [DEV] `18332134c1` 补充dispatch和combine v2/v3资料
+- [DEV] `40d3e56a1a` distribute barrier gentask 解耦
+- [DEV] `9cce384042` mc2 example
+- [DEV] `109f11ee30` Description Optimization
+- [DEV] `c38e1f3040` allGatherMatmul文档
+- [DEV] `a6739fad01` MatmulAllReduce+ARN三算子文档
+- [DEV] `d3604e595d` aclnn dipatchV2&combineV2资料修改
+- [DEV] `c495d00f36` arn和updateExpert aclnn文档修改
+- [DEV] `4ef224625a` A2 A3剩余算子readme, aclnn资料，example补齐
+- [DEV] `c6499f4603` A3算子资料，README，example补齐
+- [DEV] `786dfcea7c` add distribute_barrier and README
+- [DEV] `df69de69f6` add readme and distribute_barrier example

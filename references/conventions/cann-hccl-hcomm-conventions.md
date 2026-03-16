@@ -2994,3 +2994,603 @@ if (isSingleRank_) {
 所有源文件必须以换行符结尾(POSIX规范)。缺少换行符会导致git diff显示额外警告。
 
 出处: phase7-validation-report.md GAP-04, commit 9bcb1bdc/4a033793
+
+### VAL-09: 跨线程共享的成员变量必须使用atomic或mutex
+
+适用范围: 项目级
+强制程度: 强制
+
+跨线程访问的标志位/计数器，即使是成员变量(非全局)，也必须使用std::atomic<T>或mutex保护。裸bool/int在C++标准下的并发读写是未定义行为(即使实际上在x86/ARM64通常"可以工作")。
+
+```cpp
+// bad -- 裸bool跨线程
+class MemNameRepository {
+    bool unavailable_ = false;  // Recovery线程写，清理线程读
+};
+
+// good -- atomic保护
+class MemNameRepository {
+    std::atomic<bool> unavailable_{false};
+};
+```
+
+现有AP-GLOBAL-03/FW-AP-03只覆盖全局变量; 本规则扩展到per-device单例等非全局但跨线程共享的成员变量。
+
+出处: phase13-final-validation.md GAP-V1, commit b791de5e(ipc_memory_destroy中unavailable_裸bool跨线程)
+
+### VAL-10: 禁止throw字符串字面量
+
+适用范围: 项目级
+强制程度: 强制
+
+throw必须抛std::exception派生类(如std::runtime_error/std::invalid_argument)。禁止throw字符串字面量、int等非标准类型——它们无法被catch(const std::exception&)捕获，会穿透FW-ID-04的EXCEPTION_CATCH三层捕获中的前两层，丢失错误信息和调用栈。
+
+```cpp
+// bad -- throw字符串字面量
+throw "Invalid Arithmetic Operator";
+
+// good -- throw标准异常
+throw std::runtime_error("Invalid Arithmetic Operator");
+```
+
+注: CCU层TODO标注"需要统一整改为不抛异常"。长期方向是用HcclResult替代throw; 短期修复用std::runtime_error替代字符串字面量。
+
+出处: phase13-final-validation.md GAP-V2, commit 58037fd5(ccu_operator_v1.h throw字符串字面量修复)
+
+### VAL-11: 头文件自包含
+
+适用范围: 项目级
+强制程度: 推荐
+
+每个头文件必须include它使用的所有类型定义，不依赖间接include传递。即: 单独include这个头文件不会产生编译错误。
+
+```cpp
+// bad -- 依赖间接include
+// ccu_common.h 使用uint32_t但没有 #include <cstdint>
+struct CcuParam { uint32_t loopNum; };  // 依赖某个先于此头文件被include的文件提供uint32_t
+
+// good -- 自包含
+#include <cstdint>
+struct CcuParam { uint32_t loopNum; };
+```
+
+R-1.4的-Werror会在某些编译配置下暴露此问题(不同平台的间接include链不同)，但显式自包含是更可靠的做法。
+
+出处: phase13-final-validation.md GAP-V3, commit 58037fd5(5个CCU头文件补充缺失include)
+
+---
+
+# 第11章: Developer's Casebook (案例判例法)
+
+本章从四仓库1735条commit中精选50个landmark case，提供conventions无法覆盖的"判断力"。
+conventions告诉你"做什么"，casebook告诉你"在具体场景下怎么判断"。
+
+深度分析详见: references/dig-repo-code/hccl-hcomm/phase10-feature-arch.md / phase10-bugfix-lifecycle.md / phase10-opt-protocol.md / phase10-refactor-revert.md
+
+## 11.1 案例索引
+
+### FEATURE类(9个)
+
+| ID | Repo | Hash | 标题 | 可迁移经验 |
+|----|------|------|------|-----------|
+| FT-1 | hccl | 549c4537 | new selector(220文件) | 核心参数结构体扩展用继承+尾部追加序列化; 220文件联动次日暴露CCU scatter bug(BF-9)，大规模selector重构必须全算子全设备回归 |
+| FT-2 | hccl+hcomm | 12a2c84f | A5 aicpu communicator | 新芯片通信域优先在framework/next新建独立模块，从旧巨型类中删芯片专用代码; 跨仓4分钟内同步，hccl侧极少hcomm侧承担主要工作 |
+| FT-3 | hcomm | fa8ed355 | double die alg | CCU算法必须遵循context+instruction+template三层文件结构; 一个拓扑通常适配4+种集合通信算子，10-15新文件+2000-3000行 |
+| FT-4 | hccl | 3e916555 | DPU reducescatter | 与现有device-side差异太大时应新建独立Op目录和Executor; DPU是Op→Executor→Template两层(跳过hcomm) |
+| FT-5 | hcomm | 0d9239b5 | alg selector remake | hccl层和hcomm层selector独立演进、概念对齐但实现独立; 枚举值不一致是跨仓演进代价 |
+| FT-6 | hcomm | ebb54874 | mix-running(同日revert) | 跨V1/V2边界37文件+1140行合入即回退; 影响op_base.cc的大功能应分步合入+feature flag |
+| FT-7 | hcomm | 4c779e13 | symmetric memory | 新增内存管理子系统初始版本几乎必然有资源释放遗漏; 3930行中1245行UT(32%)是标杆 |
+| XR-2 | hccl-dev+hcomm-dev | 0ca13cd6+79e73f3c | scatter switch to aicpu | 跨仓执行模式切换必须原子提交(18秒间隔); hccl做减法hcomm做调整 |
+| CL-1 | hcomm | d0d5cce1 | multi process per rank | Legacy层30文件全新功能开发是现实; 端口管理从硬编码升级配置化的"初始化后补充配置"模式 |
+
+### BUGFIX类(9个)
+
+| ID | Repo | Hash | 标题 | 可迁移经验 |
+|----|------|------|------|-----------|
+| BF-1 | hcomm | 75659d24 | 重执行多线程时序 | 先清物理资源再清异常标记; 34文件feature commit间接破坏retry路径——feature review时需审查retry/异常/并发路径 |
+| BF-2 | hcomm | 1535b1c4 | 读写锁→原子变量 | 通信框架并发控制优先atomic(CAS+spinloop); 粗粒度mutex几乎必然导致性能退化(对比c546d353被revert) |
+| BF-3 | hcomm | 994390df | Step快恢失败 | 状态机初始状态必须在构造/注册时显式设置; 设备侧容错逻辑必须有环境判断门控 |
+| BF-4 | hcomm | 9bcb1bdc | CP算法三独立bug | 分层pipeline层间数据依赖必须显式建模; 同commit多fix应确保每个fix有独立测试 |
+| BF-5 | hccl | 992fd5b | CCU NHR参数错误 | CCU threadNum/loopNum错误值导致症状(死锁)与根因(参数)距离很远; 新CCU template必须对每个GetXxxNum做单元验证 |
+| BF-6 | hccl | b779699 | AICPU .so缺符号 | 新增.cc必须同时检查两个CMakeLists.txt(Host/Device); 引用Host-only API需AICPU_COMPILE条件编译 |
+| BF-7 | hccl | 3e9fbbd | A3 fallback路由 | fallback条件顺序决定芯片走哪条路径; 结构体新增字段后所有手动偏移计算需同步更新 |
+| BF-8 | hcomm | fa61b9fc | Thread API跨层bug | 跨Host-Device资源需双向映射管理(D2H Map); 销毁时必须完整清理所有映射条目 |
+| BF-9 | hccl | 80a70729 | CCU scatter地址时机 | CCU初始化必须放CCU_WHILE外部; CCU控制流不等同于C++控制流 |
+
+### OPTIMIZATION类(3个)
+
+| ID | Repo | Hash | 标题 | 可迁移经验 |
+|----|------|------|------|-----------|
+| OPT-1 | hcomm | fd9d488c | groupSendRecv小数据 | 批量编排替代逐个执行; 128KB阈值需权衡编排开销和传输时间 |
+| OPT-3 | hcomm | a98eb47a | AICPU微优化 | UNLIKELY宏是最低风险最高收益的热路径优化; 同时增加日志是良好实践 |
+| OPT-4 | hcomm | 8b0dc7b9 | RS&AAV FastLoad | CCU FastLoad扩展: 增opType判断+设计ccuParamsMappingKey+特殊拓扑后处理; CachedCCUParams需正确传递move语义 |
+
+### PROTOCOL类(6个)
+
+| ID | Repo | Hash | 标题 | 可迁移经验 |
+|----|------|------|------|-----------|
+| PL-1 | hcomm | 93222924 | HB check(main版) | 协议功能必须提供运行时开关(默认关闭); "introduce→revert→add-switch-redo"是标准上线模式 |
+| PL-2 | hcomm-dev | ebfcde5c | HB check重做(dev版) | 同PL-1; inconsistentCheckSwitch默认false，通过HCCL_DFS_CONFIG控制 |
+| PL-3 | hcomm-dev | 0e82e543 | scatter notify跨引擎 | 跨引擎资源共享应在Thread管理层做抽象(Export/Import); 双向映射表+互斥锁是标准模式 |
+| PL-4 | hcomm-dev | 9ceead3b | topo detect retry | 建链重试必须: (1)总超时不变从中切分; (2)非末次降低日志级别; Server/Agent双边同步修改 |
+| PL-5 | hcomm-dev | 28f18ab5 | OpRetry简化changeLink | 全局变量传递状态机决策是反模式; "宁可多做恢复也不漏做"更安全; 净减25行同时解决正确性和并发问题 |
+| PL-6 | hccl+hcomm | 89a09db2 | host&device sync(3维度) | 跨Host-Device同步必须纳入框架资源管理(Thread/Notify/Stream); 裸ACL调用导致泄漏风险; 跨仓21秒原子提交 |
+
+### ARCH_ADAPT类(4个)
+
+| ID | Repo | Hash | 标题 | 可迁移经验 |
+|----|------|------|------|-----------|
+| AA-1 | hccl-dev+hcomm-dev | 217dd2cf | ABI兼容+接口改名 | 跨仓接口必须有ABI头(version+magicWord+size); __attribute__((weak))弱符号解耦编译 |
+| AA-2 | hcomm-dev | 88f70272 | A3 AIV批量适配 | 标准模式: _cn后缀kernel注册 + _for_910_93 Executor + _crossnode_91093 Template |
+| AA-3 | hcomm | c8a15c3e | A3 midcount优化 | 新分支插入selector优先级链正确位置; 阈值(16KB-256KB)必须有性能数据支撑 |
+| AA-5 | hcomm | 4afb1c39 | RoCE flush适配 | capability-based(GetLbMax)比device-type-based更具前向兼容性 |
+
+### LIFECYCLE类(4个)
+
+| ID | Repo | Hash | 标题 | 可迁移经验 |
+|----|------|------|------|-----------|
+| LC-1 | hcomm | e63840b6 | AlltoAll symmetric mem | isZeroCopy标记贯穿algorithm→framework→device; PrepareSymmetricMemory必须遍历所有topology level |
+| LC-2 | hcomm | 3315532a | memDesc所有权 | 序列化产物所有权应属于产生它的对象; HCCL_E_AGAIN路径也必须返回有效handle |
+| LC-3 | hcomm | 9167c142 | 资源刷新判断 | 是否需要刷新的判断应在使用方(device kernel)而非提供方(host service); 跨域flag传递脆弱 |
+| LC-4 | hcomm | c5443da0 | stream资源耗尽 | 硬件资源(stream/event/notify)有限; "每实例独占"不可行; 优先共享资源+同步原语(event) |
+
+### REFACTOR类(3个)
+
+| ID | Repo | Hash | 标题 | 可迁移经验 |
+|----|------|------|------|-----------|
+| RF-1 | hccl-dev+hcomm-dev | c696e52f | 算子入口调整 | "thin wrapper+Inner suffix"模式: 旧位置重命名XXXInner，新位置一行转发; 两仓11分钟间隔 |
+| RF-2 | hcomm-dev | 4fc686be | hccl_fwk→hcomm重命名 | 模块重命名应在仓库初始化阶段一次性完成; 检查所有CMakeLists.txt target引用 |
+| RF-3 | hcomm-dev | e10d1002 | 拆分大文件 | extract+redirect模式: 新文件承接被抽出函数，原文件include新头文件; 行数应基本持平 |
+
+### INFRA类(2个)
+
+| ID | Repo | Hash | 标题 | 可迁移经验 |
+|----|------|------|------|-----------|
+| XR-4 | hccl-dev+hcomm-dev | de127490 | API Changes多轮 | 跨仓API变更不要期望一次做对; 预留revert余量; 首次变更尽量小 |
+| CL-2 | hcomm | c5709dd4 | EngineCtxDestroy API | legacy/next共存期新增API必须双路径实现+双路径UT; 先实现legacy路径(当前主力) |
+
+### REVERT类(10个)
+
+| ID | Repo | Hash | 原始变更 | Revert原因 | 时间窗口 |
+|----|------|------|---------|-----------|----------|
+| RV-1 | hcomm-dev | 1844b823 | ars code(51文件) | 依赖的基础设施未先导合入 | 次日 |
+| RV-2 | hcomm | 0c033874 | mix-running(37文件) | 设计缺陷(临时方案合入主干) | 10小时 |
+| RV-3 | hcomm | 753ba8c2 | offline compile(24文件) | cmake文件重命名遗漏引用 | 1小时 |
+| RV-4 | hccl-dev | 52bda686 | 安装路径变更(18文件) | 路径不兼容 | 未知 |
+| RV-5 | hcomm-dev | 30e25e50 | Runtime interfaces | 外部依赖(Runtime/ACL)未就绪 | 4天 |
+| RV-6 | hcomm-dev | 1d8e2c14 | rts interfaces | 接口兼容性问题 | 7天 |
+| RV-7 | hcomm-dev | a37e6cf1 | HB check(不可关闭) | 功能无开关只能整体Revert | 2天 |
+| RV-8 | hcomm | 0c3be05f | Revert "Revert loopnum" | 重新引入(17天验证后) | 17天 |
+| RV-9 | hcomm | 72cdf80e | fix loopnum=128 | CCU参数验证不足 | 6小时 |
+| RV-10 | hcomm | f0666214 | 910_95 sdma | 三合一反模式(硬编码芯片名/nullptr信号/枚举混用) | 6小时 |
+
+## 11.2 Error→Fix对
+
+变更引入问题 → 后续commit修复。间隔越短 = 问题越表层。
+
+| ID | Error Commit | Fix Commit | 间隔 | 模式 |
+|----|-------------|-----------|------|------|
+| EF-1 | d17b1f3a(alltoallv cache, 34文件) | BF-1(75659d24, 2行) | 10小时 | 大feature间接破坏retry时序 |
+| EF-2 | FT-6(ebb54874, 37文件) | RV-2(0c033874, 全量回退) | 10小时 | 设计缺陷只能全量回退 |
+| EF-3 | 99d2a2b3(ars code, 51文件) | RV-1(1844b823) → 62e4b1c2(6天后重引入) | 次日+6天 | 时机问题需等基础设施就绪 |
+| EF-4 | FT-1(549c4537, 220文件) | BF-9(80a70729) | 1天 | 大规模selector重构暴露CCU bug |
+| EF-5 | SetDispatcherCtx + OpRetry timeout | PL-5(28f18ab5) | 同日 | 全局变量竞态 |
+
+## 11.3 Revert链模式
+
+6条典型Revert链揭示不同时间尺度的失败根因:
+
+Chain 1 — loopnum(1行→3commit→17天):
+  fb56d64b(fix loopnum=128) → RV-9(6小时Revert) → RV-8(17天后重引入)
+  教训: CCU参数验证周期是周级不是小时级
+
+Chain 2 — HB check(引入→Revert→加开关重做，34天):
+  (init引入) → RV-7(a37e6cf1, 2天Revert) → PL-2(ebfcde5c, 加开关) → PL-1(93222924, main版)
+  教训: 核心基础设施功能必须带开关; "introduce→revert→add-switch-redo"是标准模式
+
+Chain 3 — mix-running(10小时，未恢复):
+  FT-6(ebb54874) → RV-2(0c033874)
+  教训: "临时方案"不应合入主干; 跨V1/V2大改无feature flag必被revert
+
+Chain 4 — offline compile(1小时):
+  b3c0ad3e(Part1) → 05b38411(Part2) → RV-3(753ba8c2, 1小时) → 6a7c0c81(次日重引入)
+  教训: cmake重命名前grep -r确保无遗漏引用
+
+Chain 5 — sdma(6小时，未恢复):
+  0e5be69c(sdma support) → RV-10(f0666214)
+  教训: 三条反模式(硬编码芯片名/nullptr信号/枚举混用)
+
+Chain 6 — ars code(次日→6天恢复):
+  99d2a2b3 → RV-1(1844b823, 次日) → 62e4b1c2(6天后)
+  教训: 50+文件算法引入应将基础设施变更独立为先导commit
+
+Revert时间窗口与根因的相关性:
+- <1小时 = CI/编译失败(RV-3)
+- 6-10小时 = 功能测试/设计缺陷(RV-2/RV-9/RV-10)
+- 次日 = 集成测试问题(RV-1)
+- 周级 = 外部依赖/硬件验证(RV-5/RV-6/RV-8)
+- 月级 = 生产暴露(RV-7→PL-2, 34天)
+
+## 11.4 跨类别横切面模式
+
+### CB-CROSS-01: 跨仓提交不对称性
+
+hccl改1-4文件, hcomm改20-47文件(比例约1:10)。
+hcomm先提交(承载主要实现), hccl后提交(thin wrapper/selector适配)。
+时间窗口: 18秒(XR-2) ~ 4分钟(FT-2) ~ 11分钟(RF-1)。
+
+出处: FT-2/XR-2/RF-1/PL-6/AA-1, phase10-feature-arch.md
+
+### CB-CROSS-02: 被Revert变更的共性缺陷
+
+被revert变更的四大共性: (1)缺功能开关(30%); (2)缺测试; (3)变更范围过大; (4)隐式假设。
+3/10未恢复(设计层面问题), 7/10恢复(时机/验证/灰度问题)。
+
+出处: RV-1~RV-10完整分析, phase10-refactor-revert.md
+
+### CB-CROSS-03: Host-Device边界是bug富矿
+
+13个BUGFIX案例中11个涉及Host-Device边界。
+设备侧BUGFIX密度43.5% vs Host侧30.3%(Phase 8.8数据)。
+根因分布: 时序/顺序(33%) > 并发/锁(22%) = 编译条件遗漏(22%)。
+
+出处: BF-1~BF-9, phase10-bugfix-lifecycle.md + phase8-device-vs-host.md
+
+### CB-CROSS-04: 全局变量是通信框架反模式
+
+PL-5删g_isRdmaError, PL-6删g_notifies_host_with_device。
+替代方案: per-communicator状态 + 框架资源管理体系。
+
+出处: PL-5/PL-6, phase10-opt-protocol.md
+
+### CB-CROSS-05: 核心基础设施新功能的成功模式
+
+步骤: (1)功能开发+默认关闭开关; (2)内部验证; (3)小范围灰度; (4)开关默认打开。
+env_config解析成本远低于revert成本。
+
+出处: PL-1/PL-2/RV-7/Phase 8.9(retry默认关闭), phase10-opt-protocol.md
+
+## 11.5 规则-案例交叉引用
+
+现有convention规则与案例的对应关系(供自检时快速定位证据):
+
+| 规则 | 验证案例(遵循) | 违反案例(反例) |
+|------|---------------|---------------|
+| P-ID-01 CHK_RET 100%覆盖 | BF-3(缺检查→快恢失败) | BF-1(CHK_RET无法捕获时序错误) |
+| P-ID-04 new(nothrow)+CHK_PTR_NULL | FT-7(symmetric mem) | RV-10(nullptr作为"不可用"信号) |
+| P-AP-01 全局可变状态 | — | PL-5(g_isRdmaError), PL-6(g_notifies) |
+| R-1.3 hccl单向依赖hcomm | RF-1(thin wrapper), PL-6(21秒原子) | — |
+| R-1.10 V1/V2双代架构 | FT-2(A5走V2), CL-2(双路径UT) | FT-6(跨V1/V2 37文件revert) |
+| FW-ID-06 unique_ptr+显式析构序 | LC-2(所有权转移) | BF-8(D2H映射残留) |
+| AP-GLOBAL-07 忙等待无退避 | BF-2(CAS+CPU_PAUSE) | c546d353(被revert的粗mutex) |
+| TST-02 TEST_F唯一测试宏 | FT-7(32% UT覆盖) | — |
+| VAL-01 struct字段默认初始化 | BF-3(状态机初始值) | — |
+
+---
+
+# 第12章: 场景化开发指南
+
+本章面向开发任务组织，每个场景 = 决策清单 + 常见陷阱 + 案例引用。
+决策清单按执行顺序排列，每步可直接转化为编码动作。
+
+## 12.1 给hccl新增一个集合通信算子
+
+决策清单:
+1. 确定执行模式: Device-side(主路径) vs DPU Host-side(FT-4独立两层架构，跳过hcomm)
+2. 定义Op入口: 参照AllReduce的三重门控→参数校验→TopoInfo→算法选择模式(Phase 5.4)
+3. 实现Selector 5路分派: SelectDPUAlgo→SelectCcuMsAlgo→SelectCcuScheduleAlgo→SelectAivAlgo→SelectAicpuAlgo(Phase 3)
+4. 选择Executor: 继承InsCollAlgBase(V2主力，28个子类) 而非ExecutorBase(V1仅scatter用)
+5. 决定hcomm路径: V2 framework/next(新芯片) vs V1 framework/device(旧芯片)(FT-2)
+6. 扩展alg_param.h: 继承+尾部追加序列化，避免中间插入枚举值(AA-1 ABI头)
+7. 更新ST测试: hccl_stub.cc同步更新，覆盖全模式/全数据类型/全拓扑; 目标UT占比32%(FT-7标杆)
+
+常见陷阱:
+- FT-1→BF-9: 大规模selector重构(220文件)次日暴露CCU scatter地址时机bug
+- FT-6: 跨V1/V2边界+op_base.cc大改+无feature flag = 10小时revert
+- BF-7: 多芯片fallback路由条件顺序决定走哪条路径，新增芯片必须逐行审查整个fallback链
+- scatter(20次修改): 初始设计不稳定导致反复修改，设计上应为演进而非完美
+
+## 12.2 给hcomm新增一种通信算法
+
+决策清单:
+1. 选择base class: AlgorithmAivBase(单阶段算法) vs AllReduceOperatorAiv(多阶段pipeline)
+2. 使用HCCL_KERNEL_DISPATCH_XXX宏按数据类型注册kernel(6-9种原子类型，9种copy-only)
+3. 严格遵循同步四步: WaitLocal→DataCopy→SignalRemote→WaitRemote(顺序不可变)(BF-4)
+4. 选择数据搬移引擎: MTE2(DDR→L1) / MTE3(L1→DDR) / SDMA/RDMA(跨节点)
+5. 如果走CCU: 创建三层文件(context+instruction+template)，enum在末尾追加(FT-3)
+6. 注册到communicator: V1(legacy) vs V2(next)根据设备类型决定(FT-2/FT-5)
+7. 定义拓扑约束: ring/mesh/2-die fullmesh，在Selector中显式预过滤
+
+常见陷阱:
+- BF-4: pipeline层间数据依赖(谁先获信息、谁先启动)未显式建模导致三个独立bug
+- BF-5: CCU threadNum 1→2一个数字的差异导致死锁——参数影响的间接性极高
+- RV-9: CCU参数(loopnum=128)验证需17天硬件周期，不是6小时UT能覆盖
+- OPT-4: CachedCCUParams的move构造必须传递所有新增字段(insType)
+
+## 12.3 修复一个通信超时/死锁bug
+
+决策清单:
+1. 日志溯源: 沿CHK_RET九层传播路径从API→driver/runtime反向追踪(Phase 5.3)
+2. 检查Notify三步: Send/Wait/Release哪步卡住(Phase 2.1)
+3. 验证错误码转换: hccl↔hcomm边界HcclResult↔HcomResult，static_cast可能产生无意义值
+4. 区分同步传播(CHK_RET立即返回) vs CQE异步检测(延迟发现)(Phase 5.3)
+5. 重执行路径: 先清物理资源(buffer/SQ)再清异常标记，顺序决定正确性(BF-1)
+6. 检查锁粒度: 纯atomic优于全局mutex; spinloop CAS比condition_variable更稳(BF-2)
+7. 全量回归: semantics_check + 全算子×全拓扑，不要只跑复现场景
+
+常见陷阱:
+- BF-1: 34文件feature commit间接破坏retry时序，2行语句重排修复——根因定位极难
+- BF-3: 重执行FSM初始状态未在注册时显式设为RUNNING，默认值未定义
+- BF-9: CCU_WHILE/CCU_IF是CCU控制指令不是C++控制流，地址初始化放循环体内会每轮执行
+- Phase 8.8: 13个BUGFIX案例11个涉及Host-Device边界; 设备侧BUGFIX密度43.5% vs Host侧30.3%
+
+## 12.4 适配一个新芯片平台
+
+决策清单:
+1. 能力探测: 优先capability-based(运行时API检测如GetLbMax)(AA-5) 而非device-type-based(硬编码if/else)(AA-2)
+2. 条件编译: 区分Host/AICPU双目标; #ifndef AICPU_COMPILE保护Host-only API(BF-6)
+3. 降级路径: 显式错误码(非nullptr)表示"功能不可用"; 两条路径都需完整可测(RV-10反模式)
+4. 跨仓原子执行: hcomm先提交(主要实现)，hccl后提交(wrapper); 1:10文件比例(FT-2)
+5. ABI兼容: HcclAbiHeader(version+magicWord+size+reserved) + __attribute__((weak))弱符号(AA-1)
+6. 标准命名: Executor用_for_910_93后缀, kernel用_cn后缀, template用_crossnode_91093(AA-2)
+7. 平台ST测试: 覆盖kernel注册+降级路径+CCU参数+跨仓集成
+
+常见陷阱:
+- RV-10(f0666214): 硬编码芯片名+nullptr信号+枚举混用三合一反模式，无测试→6小时revert
+- BF-7(3e9fbbd): A3 fallback路由条件顺序错误; sizeof偏移量在结构体变更后未同步
+- BF-6(b779699): 新.cc仅加入一个CMakeLists.txt; AICPU_COMPILE guard遗漏; 链接时才暴露
+
+## 12.5 优化某算法的通信性能
+
+决策清单:
+1. 定位瓶颈层: Selector(算法选择)(AA-3) vs Executor(编排)(OPT-1) vs Algorithm(pipeline)(BF-4) vs CCU microcode(参数)(RV-9)
+2. 分析pipeline层间依赖: 多阶段pipeline需显式依赖建模(BF-4三独立bug)
+3. buffer策略: slice对齐(32B/512B)，per-stream隔离，数据量阈值有测量支撑(OPT-1: 128KB)
+4. CCU参数优化是极高风险: loopnum一行改动验证周期17天(RV-9); FastLoad扩展需正确传递所有字段(OPT-4)
+5. 低风险微优化: UNLIKELY标注错误分支(约30处)(OPT-3); early-exit重排; 同步增加可观测性日志
+6. 多平台验证: A2/A3单机/双机，测量实际效果; 准备回退预案(环境变量控制)
+
+常见陷阱:
+- RV-9: CCU_MS_DEFAULT_LOOP_COUNT 64→128, 6小时revert, 17天后才重新引入——1行代码的影响面覆盖所有CCU调度路径
+- BF-4: 多层pipeline同一commit修复3个独立bug，每个fix需独立UT验证
+- OPT-1: big/small双路径增加维护成本; 如果收益<5%，单路径更好
+
+## 12.6 做一次跨模块重构
+
+决策清单:
+1. 影响范围量化: grep统计被修改接口的所有调用点; 头文件变更触发多少文件重编译(Phase 1 alg_param.h)
+2. 分步提交: 基础设施/依赖先行→核心逻辑→注册/链接→测试(RV-1反例: 基础设施未先导→51文件次日revert)
+3. 跨仓接口: thin wrapper+Inner suffix; hcomm先提交(依赖方), hccl后提交(被依赖方); 11分钟间隔(RF-1)
+4. V1/V2双路径: 两条路径都需实现+独立UT文件(CL-2: 29文件含双路径测试)
+5. legacy层: 40%的commit触及legacy(Phase 8.7); 重构legacy需极度谨慎，优先最小适配而非大改
+6. 回归验证: 纯重构行数应基本持平(+X/-X); 如果+2000/-500则可能夹带功能修改(RF-3标杆)
+
+常见陷阱:
+- RV-1(1844b823): 代码正确但时机不对——51文件算法依赖的基础设施未先导合入
+- RV-3(753ba8c2): cmake文件重命名遗漏引用→1小时CI失败revert; 提交前grep -r确认
+- RF-1: 跨仓提交顺序: hcomm(依赖方)先导出，hccl(被依赖方)后导入
+- XR-4: 跨仓API变更平均需2-3轮迭代才能稳定; 预留revert余量
+
+## 12.7 修复资源泄漏
+
+决策清单:
+1. 识别资源类型: Stream/Notify/Channel/CommMem/对称内存/Thread handle各有独立管理机制
+2. 追踪完整生命周期: 创建点→使用点→销毁点; 绘制所有权转移图(LC-2 memDesc所有权属于对象)
+3. 验证引用计数: 每个increment有对应decrement; refCount==0在所有路径触发; 多线程需atomic(FT-7)
+4. 审计异常路径: CHK_RET每层的early return不能跳过cleanup; retry FSM路径正确释放(BF-3)
+5. 评估RAII可行性: host侧可用(mutex/vector); device侧需显式API(Create/Destroy对); 跨域映射需完整清理(BF-8)
+6. 并发安全: atomic+spinloop优于mutex(BF-2); 资源释放的线程安全性
+
+常见陷阱:
+- FT-7: 新内存子系统初始版本必有泄漏(3930行后续修复a9fea200); 先写leak检测UT
+- BF-8: D2H映射残留→use-after-free; 销毁时清理所有映射条目
+- LC-4: per-model/instance独占分配耗尽stream; 改为全局stream+Event
+- LC-2: HCCL_E_AGAIN路径也必须返回有效handle
+
+## 12.8 修改CCU/AICPU设备侧代码(hccl/hcomm独有)
+
+决策清单:
+1. 判断变更类型: Type A(microcode参数, 1-3行, 影响巨大) / Type B(kernel逻辑, 10-50行) / Type C(新kernel, 100-1000行)
+2. Host-Device参数一致性: param.hcclComm赋值时机、结构体偏移计算、反序列化正确性(BF-7/BF-9)
+3. 执行模式选择: CCU MS(pipeline)/CCU Schedule/AICPU+AIV/AICPU/Legacy; 模式切换需跨仓原子(XR-2, 18秒)
+4. 同步模型: kernel内部(SyncAll/WaitLocal/SignalRemote) vs kernel间(Notify三步); 从裸ACL迁移到Thread Export框架(PL-6)
+5. DFX可观测性: task_exception入口, 导出notify_id/buffer_addr/slice_size(OPT-3)
+6. 验证策略: Type A需17天硬件验证周期(RV-9); Type B需AICPU_COMPILE guard; Type C需三层文件结构(FT-3)
+7. 回退预案: Type A通过环境变量; Type B通过feature flag; Type C通过Selector fallback路径
+
+常见陷阱:
+- RV-9: CCU常量(loopnum)1行修改→17天才完成硬件验证; 影响覆盖所有CCU调度路径
+- BF-9: CCU_WHILE循环内的地址初始化每轮执行; CCU微码语义不等于C++循环语义
+- BF-5: GetThreadNum 1→2一个数字修复死锁; 参数对调度的影响路径极长
+- BF-6: AICPU_COMPILE guard遗漏→链接阶段才暴露; 新.cc必须检查两个CMakeLists.txt
+- Phase 8.8: hccl:template/ccu的BUGFIX密度44.4%——每次CCU模板修改波及34文件
+
+## 12.9 修改通信协议(Notify/重执行/心跳)(hccl/hcomm独有)
+
+决策清单:
+1. 评估双边变更: 对端是否正确处理新字段/状态/消息; 超时是否匹配(PL-4 Server+Agent同步修改)
+2. 添加运行时开关(默认关闭): 环境变量控制，入口短路，关闭时零开销(PL-2用开关逆转revert)
+3. 确保FSM完整性: 每个状态有进入/退出条件，所有错误路径处理，初始状态显式(BF-3)
+4. 简化重执行路径: 删全局变量(竞态), 合并双路径为单一"总是做完整恢复"路径(PL-5净减25行)
+5. 评估心跳帧大小: 新数据结构对50ms帧周期的影响; 动态帧大小per feature flag
+6. 多平台差异: 基于硬件能力检测(AA-5 RoCE flush)
+7. 并发安全: FSM状态不用全局变量; per-communicator互斥锁; 优先atomic(BF-2)
+
+常见陷阱:
+- RV-7: 核心基础设施无开关→只能整体Revert; 34天后才用开关重做(PL-2)
+- PL-5: 全局变量传递FSM决策跨线程竞态; 合并双路径更安全
+- BF-1: retry路径2行时序修复——先清物理资源再清异常标记
+- Phase 8.9: retry从"基本能用"到"生产可靠"需3个月; 2行修复极难定位
+
+## 12.10 将功能从legacy迁移到next/framework(hccl/hcomm独有)
+
+决策清单:
+1. 评估迁移时机: 如果目标功能近3个月仍有FEATURE/BUGFIX在legacy中，先稳定; legacy占比40%且在爆发而非衰退(Phase 8.7)
+2. 确认功能等价: next实现必须覆盖所有legacy路径; 需V1/V2双UT文件; 分别mock/stub(CL-2)
+3. 选择迁移策略: thin wrapper+Inner suffix(RF-1) > 一次性文件移动; 2432文件orion→legacy重命名证明legacy仍是主力
+4. 理解legacy依赖结构: communicator_impl.cc(47次修改)是hub; legacy/service(39 commits, 每commit触及45文件)耦合度极高
+5. V1/V2分离: 新芯片路由到next(framework/next/coll_comms), 旧芯片留在device; 新建独立模块而非在巨型类中加分支(FT-2)
+6. 测试覆盖: legacy路径测试不可直接复用(V1/V2 mock/stub不同); input/output可共享但framework必须分离
+
+常见陷阱:
+- legacy/service是最高耦合区: 1748 file-touches in 39 commits(平均45文件/commit)
+- communicator_impl.cc: 47次修改(FEATURE 13+BUGFIX 11)——复杂度被低估
+- 真正的迁移仅13%: 84/97跨层commit是"同步开发"而非真正迁移
+- FT-6: 37文件跨V1/V2功能10小时revert; 必须分步+feature flag
+- legacy仍是新功能开发场: 40条legacy-only FEATURE, 88.9%无芯片关键词
+
+---
+
+# 第13章: 灰色地带指南
+
+本章提炼conventions无法覆盖的判断力。每个灰色地带有正反两面案例支撑。
+当convention规则不足以决策时，参考本章的判断框架。
+
+## 13.1 何时用V1路径 vs V2路径
+
+核心矛盾: V2(IndependentOp/pImpl委托)更干净但仅A5(910_95)支持; V1(RankGraph全栈)覆盖全平台且仍是活跃开发路径。
+
+判断标准:
+- V2路径: 目标仅A5 + 功能完全独立 + next基础设施已就位(FT-2: A5新建独立模块)
+- V1路径: 需多芯片支持 + legacy生态依赖 + 修改现有文件为主(CL-1: 30文件全legacy)
+- 绝不在单个大commit中跨越V1/V2边界(FT-6: 37文件同日revert的教训)
+
+推荐默认: A5独立功能→V2; 其他→V1。共存期双路径实现成本2x(CL-2)是必须接受的代价。
+
+Phase 8.7数据: legacy从2026-02起占hcomm 40%，不是在衰退而是在爆发; 40条legacy-only FEATURE证明V1仍是主力。
+
+## 13.2 何时在hccl层实现 vs 下沉到hcomm
+
+核心矛盾: hccl(编排) vs hcomm(实现)的边界模糊。两层各有独立selector/CCU模板体系。
+
+判断标准:
+- 逻辑是否需要知道通信链路实现细节(socket/RDMA/buffer)? 需要→hcomm; 不需要(仅拓扑/数据量/芯片类型)→hccl
+- 算法选择: V2→hccl AutoSelector; V1→hcomm legacy base_selector(FT-1 vs FT-5独立演进)
+- CCU模板: hccl templates/→hccl CCU体系; hcomm legacy/→hcomm CCU体系
+
+推荐默认: hccl是薄决策层, hcomm是厚实现层。Feature跨仓比例约1:10(hccl改1-9文件, hcomm改18-110文件)。
+
+## 13.3 何时用深继承 vs 扁平实现
+
+核心矛盾: hcomm(168 pure virtual, 6-7层继承) vs hccl(8 pure virtual, 2-3层)。InsCollAlgBase有28个子类。
+
+判断标准:
+- 新子类与父类共享相同执行模型(CalcRes/Orchestrate/KernelRun三步)→继承InsCollAlgBase(FT-1/AA-2)
+- 执行模型根本不同(如DPU Host-side)→独立类不继承(FT-4)
+- 数据结构扩展→继承+尾部追加(保持向后兼容)(FT-1 TopoInfoWithNetLayerDetails)
+
+推荐默认: 同执行模型→继承V2 InsCollAlgBase; 不同执行模型→独立实现。scatter留在V1不是因为V1更好，而是时机不对(正在迁移执行模式+DPU双路径+技术债密度高)。
+
+## 13.4 新功能放在hcomm哪一层(algorithm/framework/platform)
+
+核心矛盾: 三层各有职责但边界在演进中。对称内存跨三层，Thread Export跨两层。
+
+判断标准:
+- 修改C ABI边界(comm_primitive): 仅当transport/notify/mem级别共同基础设施才扩展(AA-5: 5文件36行)
+- 多算法复用: →framework层(FT-7 symmetric mem, PL-3 Thread Export)
+- 算法专用: →algorithm层
+- 初始化判断: "何时判断"在使用方(algorithm), "怎么做"在管理方(framework)(LC-3)
+
+推荐默认: framework层(复用度最高)。不确定时先放framework，根据实际复用模式再迁移。
+反面教训: FT-6跨三层37文件同日revert; BF-8跨framework/platform修18文件。
+
+## 13.5 何时做保护性编程 vs 信任调用者
+
+核心矛盾: hcomm CHK_PTR_NULL 2683次、CHK_RET 14943次(极度防御); hccl CHK_PTR_NULL仅159次(信任调用)。
+
+判断标准:
+- 跨层边界/API入口: 100%防御(P-ID-01)
+- 设备侧热路径: 保留CHK_RET + UNLIKELY宏标注(OPT-3: 约30处UNLIKELY已证明收益)
+- 状态机转换: 显式初始化+guard; assert合法性(BF-3: 初始状态未设置→快恢失败)
+- Host/Device双编译: 必须guard Host-only API(BF-6)
+- 注意: CHK_RET无法捕获时序错误(BF-1) 和偏移错误(BF-7)——防御编程有盲区
+
+推荐默认: 保持100%覆盖基线; 设备侧热路径UNLIKELY标注; 不移除运行时检查。UNLIKELY使用281次(仍有巨大标注空间)。
+
+## 13.6 何时重构legacy vs 在next中重新实现
+
+核心矛盾: legacy占修改40%且在爆发(非衰退); next仍在建设(17个TODO); 真正迁移仅13%。
+
+判断标准:
+- 紧迫修复(生产bug) + 修改范围可控(legacy内部) + next未成熟→在legacy修复(BF-3: 3文件精准修复)
+- 新芯片 + next基础设施就位 + 可做减法(从legacy删代码)→在next实现(FT-2: A5独立模块+从legacy删63行)
+- 跨legacy/next边界大改→极高风险(FT-6: 37文件同日revert)
+
+推荐默认: 共存期在legacy做维护，在next做新芯片功能; 不跨边界大改。88.9%的legacy commit无芯片关键词——legacy不是旧芯片专用代码。
+
+## 13.7 CCU调度 vs AICPU执行: 何时用哪种(hccl/hcomm独有)
+
+核心矛盾: CCU性能高但BUGFIX密度44.4%(每commit波及34文件); AICPU灵活但绝对bug量更多(80条)。
+
+判断标准:
+- 新算法首次实现 + 无需硬件级pipeline→先AICPU, 稳定后再优化为CCU
+- 需要硬件级通信-计算overlap(如double-die pipeline) + 模板base class已存在→直接CCU(FT-3)
+- CCU参数修改: 极高风险，grep所有引用, 确认在CCU_WHILE外, 预期周级硬件验证(RV-9)
+- CCU↔AICPU模式切换: 跨仓原子提交(XR-2: 同作者18秒间隔)
+
+CCU微码安全准则:
+- 初始化代码必须在CCU_WHILE外(BF-9)
+- GetThreadNum/GetLoopNum等每个方法需单元验证(BF-5)
+- 1行参数改动的影响面可覆盖所有CCU调度路径(RV-9)
+- CCU MS(单层拓扑) vs CCU SCHED(多层拓扑)
+
+推荐默认: 新算法→AICPU mode first, 稳定后再CCU。例外: 已有同族CCU模板时可直接扩展(OPT-4 SuperFastLoad)。
+
+## 13.8 通信协议修改: 渐进式 vs 一步到位(hccl/hcomm独有)
+
+核心矛盾: 渐进式每commit改一个维度风险低但可能碎片化; 一步到位干净但>30文件变更几乎必然失败。
+
+判断标准:
+- 新协议功能: 必须有运行时开关(默认关闭); 不可关闭=只能整体Revert(RV-7)
+- 开关成本(几十行env_config解析) << revert成本(发布分支协调+团队中断)
+- OpRetry状态机变更: 覆盖所有22个状态转换路径的测试
+- 系统接口迁移(RTS→ACL): adapter+dlsym动态fallback(RV-5/RV-6)
+- Notify帧结构: 极高风险, 必须有开关, 验证对网络带宽的影响
+
+推荐默认: 每commit改一个协议维度 + 运行时开关(默认关闭)。不要force-enable协议功能上线。
+
+Phase 8.9数据: retry从"基本能用"到"生产可靠"经历3个月密集修复期(2025-12到2026-02)。
+
+## 13.9 错误处理: 快速失败 vs 容错继续(hccl/hcomm独有)
+
+核心矛盾: hccl哲学是fail-fast(CHK_RET九层传播); hcomm哲学是fault-tolerant(ExceptionHandler+OpRetry 22状态机)。
+
+判断标准:
+- 参数错误/资源耗尽/契约违反→快速失败(CHK_PTR_NULL/CHK_RET)(RV-10 nullptr违反契约)
+- 网络/链路故障(可恢复超时)→容错继续: 标记状态, 走OpRetry; 资源cleanup先于异常标记清除(BF-1)
+- 建链阶段超时→有限重试: 最多3次, 总超时三等分, 非末次降级为warn(PL-4)
+- 容错路径自身出bug→快速失败: 不做嵌套retry(BF-3: 容错路径未初始化)
+- CQE异步错误: 不走CHK_RET, 标记状态在下一个同步点重试
+
+推荐默认: 快速失败(fast fail=用户看到错误可重试; 容错继续=系统不一致无法恢复)。
+仅当: (1)错误类型可恢复(网络/超时, 非参数错误); (2)恢复路径经过测试验证; (3)故障恢复成本<失败成本 时才容错继续。
+
+## 13.10 五个横切模式(综合)
+
+### GRAY-CROSS-01: 渐进优于激进
+
+>30文件需特别审查, >50文件必须拆分。
+成功案例均为小步快走: PL-5(净减25行), PL-4(超时三等分), RF-1(thin wrapper)。
+失败案例均为大步快跑: FT-6(37文件同日revert), RV-1(51文件次日revert), RV-7(HB 2天revert)。
+
+### GRAY-CROSS-02: 开关是生命线
+
+无开关的新功能 = 只有revert一条退路。
+开关成本(几十行env_config) << revert成本(发布分支协调+团队中断)。
+证据: PL-1/PL-2(HB check introduce→revert→redo-with-switch), Phase 8.9(retry默认关闭)。
+
+### GRAY-CROSS-03: 跨边界变更需原子性
+
+hccl-hcomm(PL-6 21秒, XR-2 18秒, FT-2 4分钟), V1-V2(CL-2双UT), Host-Device(BF-9 CCU语义)。
+要么原子提交，要么显式分步策略(RF-1 thin wrapper 11分钟间隔)。
+
+### GRAY-CROSS-04: 验证周期与变更层级成正比
+
+构建变更: 1小时CI。Host逻辑: 6-10小时功能测试。设备参数: 17天硬件全场景。协议: 34天集群验证。
+不要用host侧验证时间线评估device/协议变更。
+
+### GRAY-CROSS-05: 设备侧简化最有效
+
+设备侧BUGFIX密度43.5% vs Host侧30.3%。13个BUGFIX案例11个触及Host-Device边界。
+top修复: PL-5(删全局变量净减25行), BF-1(2行重排), BF-5(1个数字)。
+在通信框架中，less is more——简化优于增加复杂度。
