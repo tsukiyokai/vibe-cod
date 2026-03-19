@@ -2,7 +2,7 @@
 
 ## 概览
 
-- 仓库：/Users/shanshan/repo/cann/ops-nn-dev/
+- 仓库：~/repo/cann/ops-nn-dev/
 - 非merge提交：2571条
 - 确认缺陷提交：612条（23.8%）
 - 实际分析条目：456条（其余跳过：纯文档/配置搬迁/批量重构等）

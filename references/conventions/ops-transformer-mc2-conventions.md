@@ -1,7 +1,7 @@
 # ops-transformer MC2 Module Coding Conventions
 
-Source: /Users/shanshan/repo/cann/ops-transformer (mc2/ + common/)
-Analysis: /Users/shanshan/note/proj/dig-repo-cod/ops-transformer/phase0~6
+Source: ~/repo/cann/ops-transformer (mc2/ + common/)
+Analysis: ~/note/proj/dig-repo-cod/ops-transformer/phase0~6
 Date: 2026-03-15
 
 ---

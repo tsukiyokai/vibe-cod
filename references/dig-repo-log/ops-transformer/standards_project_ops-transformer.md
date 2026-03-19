@@ -1437,7 +1437,7 @@ auto constInfo = GetConstInfo();
 
 ### 数据来源
 
-- 仓库: /Users/shanshan/repo/cann/ops-transformer/
+- 仓库: ~/repo/cann/ops-transformer/
 - 提交总数: 1323（已排除merge commit）
 - 缺陷提交数: 243（占比18.4%，经二次过滤排除纯文档/清理提交）
 - 分析周期: 全量git历史

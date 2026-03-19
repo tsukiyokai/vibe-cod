@@ -1326,7 +1326,7 @@ FixPipe(dst, src, params);  // 某些芯片不支持
 
 ### 数据来源
 
-- 仓库: /Users/shanshan/repo/cann/ops-nn/
+- 仓库: ~/repo/cann/ops-nn/
 - 提交总数: 1474（全部非merge commit）
 - 缺陷提交数: 380（占比25.8%，经二次过滤排除纯文档/清理提交）
 - 实际代码缺陷: ~321（排除纯文档/UT/清理约59条）

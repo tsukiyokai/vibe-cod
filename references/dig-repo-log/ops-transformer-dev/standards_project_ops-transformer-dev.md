@@ -1387,7 +1387,7 @@ Revert时间线: 12月为高峰(12个)，对应tilingKey模板化整改集中推
 
 ### 附录: 数据来源
 
-- 仓库路径: /Users/shanshan/repo/cann/ops-transformer-dev/
+- 仓库路径: ~/repo/cann/ops-transformer-dev/
 - 分析周期: 2025-08至2026-01
 - 总提交: 2822 (非merge: 2820)
 - 确认缺陷: 788条 (阶段1关键词初筛)
