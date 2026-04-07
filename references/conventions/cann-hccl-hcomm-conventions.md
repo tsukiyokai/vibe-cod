@@ -1,6 +1,6 @@
 # CANN C++ Conventions (hccl & hcomm)
 
-本文档从hccl和hcomm两个仓库的系统性代码分析中提取，供vibe-coding skill消费。
+本文档从hccl和hcomm两个仓库的系统性代码分析中提取，供vibe-cod skill消费。
 每条规范可直接转化为编码动作或检查项。
 
 ---

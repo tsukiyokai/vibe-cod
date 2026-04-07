@@ -44,36 +44,29 @@ design-and-coding-guide.md:
 
 ### 仓库专项分析
 
-hccl:
-  根目录: references/dig-repo-log/hccl/
-  pattern_summary.md — 缺陷模式总结
-  standards_project_hccl.md — 审查规则集
-  defect_analysis.md — 缺陷逐条分析
-  hotspot_analysis.md — 热点文件风险分析
-  revert_analysis.md — Revert提交分析
+hccl-hcomm:
+  根目录: references/dig-repo-log/hccl-hcomm/
+  数据来源: hccl(hcomm仓库, 84条缺陷) + hccl-dev(10条缺陷) + hcomm-dev(162条缺陷), 合计256条缺陷
+  standards_project_hccl-hcomm.md — 统一审查规则集(含[来源]标签)
+  supplementary_analysis.md — 热点文件风险 + Revert事件 + 跨类别系统性风险
+  defect_analysis.md — 256条缺陷逐条分析
+  何时读: 涉及通信算法(hccl/hcomm)编码时
 
-hccl-dev:
-  根目录: references/dig-repo-log/hccl-dev/
-  pattern_summary.md — 5个缺陷类别: 枚举混淆(30%)、接口变更传播(30%)、复制粘贴(20%)、条件不完整(10%)、CMake(10%)
-  standards_project_hccl-dev.md — 审查规则集
-  defect_analysis.md — 10条缺陷逐条分析（需要看具体案例时读）
+ops-transformer:
+  根目录: references/dig-repo-log/ops-transformer/
+  数据来源: ops-transformer主仓(243条缺陷) + ops-transformer-dev(528条缺陷), 合计771条缺陷
+  standards_project_ops-transformer.md — 审查规则集(72条, 含来源标签)
+  supplementary_analysis.md — 热点文件风险 + Revert事件 + 跨类别系统性风险
+  defect_analysis.md — 771条缺陷逐条分析
+  何时读: 涉及算子tiling、kernel开发时
 
-hcomm-dev:
-  根目录: references/dig-repo-log/hcomm-dev/
-  pattern_summary.md — 12个缺陷类别(162条缺陷): 构建(14.8%)、初始化时序(10.5%)、条件分支(9.9%)、数据类型(9.9%)、命名拼写(9.3%)、资源管理(7.4%)、并发安全(6.8%)、日志(6.8%)、状态缓存超时(6.2%)、空指针(4.9%)、API设计(4.9%)、硬件适配(3.7%)
-  standards_project_hcomm-dev.md — 审查规则集
-  defect_analysis.md — 162条缺陷逐条分析
-  hotspot_analysis.md — 18个热点文件风险分析
-
-ops-transformer[-dev]:
-  根目录: references/dig-repo-log/ops-transformer/ 和 references/dig-repo-log/ops-transformer-dev/
-  pattern_summary.md — 算子开发缺陷模式
-  适用场景: 涉及算子tiling、kernel开发时参考
-
-ops-nn[-dev]:
-  根目录: references/dig-repo-log/ops-nn/ 和 references/dig-repo-log/ops-nn-dev/
-  pattern_summary.md — 算子开发缺陷模式
-  适用场景: 涉及NN算子开发时参考
+ops-nn:
+  根目录: references/dig-repo-log/ops-nn/
+  数据来源: ops-nn主仓(380条缺陷) + ops-nn-dev(612条缺陷), 合计992条缺陷
+  standards_project_ops-nn.md — 审查规则集(80条, 含来源标签)
+  supplementary_analysis.md — 热点文件风险 + Revert事件 + 跨类别系统性风险
+  defect_analysis.md — 992条缺陷逐条分析
+  何时读: 涉及NN算子开发时
 
 ---
 

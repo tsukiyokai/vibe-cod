@@ -117,7 +117,7 @@ hcomm = "Resource Infrastructure" — Multi-layer abstraction (DeviceMem/HostMem
 
 hccl = "Algorithm Expression" — Pure STL, no custom memory types, minimal move semantics, no hardware memory management. Memory complexity delegated to hcomm.
 
-### Rules for vibe-coding
+### Rules for vibe-cod
 
 - In hcomm: use owner_+move semantics for resource types, new(std::nothrow) for manual allocation, Pimpl for public headers
 - In hccl: use make_unique/make_shared, avoid malloc/free, no need for Pimpl
@@ -418,7 +418,7 @@ The 273:1 UT file ratio is the most striking difference. hcomm tests internal im
 
 ---
 
-## Actionable Rules for vibe-coding
+## Actionable Rules for vibe-cod
 
 ### When writing code in hcomm:
 
