@@ -13,15 +13,22 @@
 cann-hccl-hcomm-conventions.md:
   路径: references/conventions/cann-hccl-hcomm-conventions.md
   内容: 代码惯用法规范，从hccl/hcomm代码阅读中提炼
-  来源: dig-repo-code分析的最终产物
+  来源: 代码阅读分析的最终产物
   何时读: 编码阶段1(学习惯用法) + 阶段4.3(逐条自检)
 
 ops-transformer-mc2-conventions.md:
   路径: references/conventions/ops-transformer-mc2-conventions.md
   内容: MC2算子开发规范，从ops-transformer仓库mc2/模块的系统性代码阅读(Phase 0~9)中提炼
-  来源: dig-repo-code MC2分析的最终产物(33个算子、991条commit、29个landmark case深度分析)
+  来源: 代码阅读 MC2分析的最终产物(33个算子、991条commit、29个landmark case深度分析)
   结构: 13节 — 架构概览(S1) / op_host(S2) / op_kernel(S3) / op_graph(S4) / op_api(S5) / 跨层(S6) / 反模式14条(S7) / 演进方向8条(S8) / 测试(S9) / 注册宏速查(S10) / 案例索引(S11) / 场景化指南5个(S12) / 灰色地带判断(S13)
   何时读: 涉及ops-transformer MC2算子开发时，全流程使用(阶段1学惯用法 + 阶段2防缺陷 + 阶段3编码 + 阶段4.3自检)
+
+torch-npu-conventions.md:
+  路径: references/conventions/torch-npu-conventions.md
+  内容: torch_npu编码规范，从28,222条commit和14万行源码中提炼的39条规则(mandatory~optional分级)
+  来源: 代码阅读 torch-npu分析的最终产物(C++: csrc/ 77,751 LOC + Python: 70,866 LOC)
+  结构: 9章 — 命名(Ch.1) / 头文件与include(Ch.2) / 错误处理(Ch.3) / 内存管理(Ch.4) / 日志(Ch.5) / 并发(Ch.6) / 测试(Ch.7) / 构建(Ch.8) / 杂项(Ch.9)
+  何时读: 涉及torch_npu/PTA开发时，全流程使用(阶段1学惯用法 + 阶段3编码 + 阶段4.3自检)
 
 design-and-coding-guide.md:
   路径: references/conventions/design-and-coding-guide.md
@@ -31,54 +38,37 @@ design-and-coding-guide.md:
 
 ---
 
-## 2. 缺陷模式知识库 (dig-repo-log/)
+## 2. 代码阅读分析 (代码阅读/)
 
-来源: 基于git log的缺陷挖掘
-基于9237条提交、2279条确认缺陷的系统性分析。
-
-### 跨仓通用模式 (8个)
-路径: references/dig-repo-log/cross_repo_synthesis.md
-内容: 8个跨仓共性缺陷模式的详细分析（整数溢出、分支不完整、CMake遗漏、复制粘贴、流水线同步、Host-Kernel不一致、空指针、Revert）
-何时读: 开始任何编码任务前，通读与任务相关的模式章节
-查阅方式: Grep "共性-N" 或关键词跳转到对应章节
-
-### 仓库专项分析
-
-hccl-hcomm:
-  根目录: references/dig-repo-log/hccl-hcomm/
-  数据来源: hccl(hcomm仓库, 84条缺陷) + hccl-dev(10条缺陷) + hcomm-dev(162条缺陷), 合计256条缺陷
-  standards_project_hccl-hcomm.md — 统一审查规则集(含[来源]标签)
-  supplementary_analysis.md — 热点文件风险 + Revert事件 + 跨类别系统性风险
-  defect_analysis.md — 256条缺陷逐条分析
-  何时读: 涉及通信算法(hccl/hcomm)编码时
-
-ops-transformer:
-  根目录: references/dig-repo-log/ops-transformer/
-  数据来源: ops-transformer主仓(243条缺陷) + ops-transformer-dev(528条缺陷), 合计771条缺陷
-  standards_project_ops-transformer.md — 审查规则集(72条, 含来源标签)
-  supplementary_analysis.md — 热点文件风险 + Revert事件 + 跨类别系统性风险
-  defect_analysis.md — 771条缺陷逐条分析
-  何时读: 涉及算子tiling、kernel开发时
-
-ops-nn:
-  根目录: references/dig-repo-log/ops-nn/
-  数据来源: ops-nn主仓(380条缺陷) + ops-nn-dev(612条缺陷), 合计992条缺陷
-  standards_project_ops-nn.md — 审查规则集(80条, 含来源标签)
-  supplementary_analysis.md — 热点文件风险 + Revert事件 + 跨类别系统性风险
-  defect_analysis.md — 992条缺陷逐条分析
-  何时读: 涉及NN算子开发时
-
----
-
-## 3. 代码阅读分析 (dig-repo-code/)
-
-根目录: references/dig-repo-code/
+根目录: references/代码阅读/
 按仓库维度组织为子目录。
+
+### torch-npu/ — torch_npu (PyTorch Ascend Adapter) 分析
+来源: 系统性阅读torch_npu C++核心(csrc/ 367文件 77,751 LOC)和Python层(342文件 70,866 LOC)
+最终产物: conventions/torch-npu-conventions.md
+根目录: references/torch-npu/
+
+phase0 — 全局架构:
+  phase0-architecture-map.md — 目录树、模块LOC统计、csrc子系统职责(core/distributed/framework/aten/profiler/inductor)、Python层(inductor/profiler/npu/utils/distributed/contrib)、初始化序列、全局单例
+
+phase1 — git历史挖掘:
+  phase1-git-history.md — 28,222 commits分类统计(NEW_OP/FEATURE/OPTIMIZATION/BUGFIX/REFACTOR等)、年度趋势、Top30热文件、REVERT聚类
+
+phase2 — 设计模式目录:
+  phase2-design-patterns.md — 9大模式家族: 注册/Registration(TORCH_LIBRARY/REGISTER_OPTION/GET_FUNC 276处)、RAII/Guard(OptionalNPUGuard/LockGuard)、内存管理(NPUCachingAllocator/StorageDesc)、OpCommand算子框架、Monkey-patch注入、错误处理/异常安全、异步任务队列/Stream管理、分布式通信(ProcessGroupHCCL)、Inductor编译器后端
+
+  何时读: 需要理解torch_npu的既有模式如何做(注册三层机制/OpCommand封装/monkey-patch策略/RAII守卫)时
+
+developers-casebook.md — 16章开发决策案例: 分布式通信/内存管理/算子注册/Monkey-patch/Profiler/初始化生命周期/ACL接口/Inductor/构建系统/序列化/测试基础设施/横切模式/Revert教训/Profiler兼容/ACL版本守卫/Inductor边界适配
+  何时读: 遇到torch_npu编码决策时查阅对应章节(Case X.Y.Z格式, 含场景→约束→决策→替代→后果→可迁移经验)
+
+validation-report.md — 用5个真实commit交叉验证conventions+review-standards, 有效覆盖率86.7%(26/30 applicable rules命中), 含规则gap修补记录
+  何时读: 验证阶段参考规则实战表现
 
 ### hccl-hcomm/ — hccl + hcomm 双仓分析
 来源: 系统性阅读hccl/hcomm C++代码
 最终产物: conventions/cann-hccl-hcomm-conventions.md
-根目录: references/dig-repo-code/hccl-hcomm/
+根目录: references/hccl/
 
 phase0 — 全局架构:
   phase0-architecture-map.md — hcomm/hccl目录树、三层架构、模块关系
@@ -128,7 +118,7 @@ phase12 — 灰色地带指南(全文):
 ### ops-transformer-mc2/ — ops-transformer MC2算子分析
 来源: 系统性阅读ops-transformer仓库mc2/模块全部33个算子(991条commit, 29个landmark case)
 最终产物: conventions/ops-transformer-mc2-conventions.md
-根目录: references/dig-repo-code/ops-transformer-mc2/
+根目录: references/ops-transformer/
 
 phase0 — 全局架构:
   phase0-architecture-map.md — MC2四层架构、33个算子目录、三级公共基础设施、构建系统
@@ -185,58 +175,3 @@ round3_c_generic_stl.md — C泛型、模板、STL
 round4_final_notes.md — 杂项要点
 abseil-tips.md — Abseil C++ Tips精选
 
----
-
-## 5. Ascend C文档 (docs/ascendc/)
-
-### API参考 (661页)
-索引: references/docs/ascendc/api_reference/INDEX.md
-页面目录: references/docs/ascendc/api_reference/pages/
-查阅方式: Grep INDEX.md搜API名 → 获取页面文件名 → Read pages/下对应.md
-
-高频API直接路径:
-  AllReduce     → references/docs/ascendc/api_reference/pages/atlasascendc_api_07_0872.md
-  AllGather     → references/docs/ascendc/api_reference/pages/atlasascendc_api_07_0873.md
-  ReduceScatter → references/docs/ascendc/api_reference/pages/atlasascendc_api_07_0874.md
-  AlltoAll      → references/docs/ascendc/api_reference/pages/atlasascendc_api_07_0875.md
-  HCCL InitV2   → references/docs/ascendc/api_reference/pages/atlasascendc_api_07_10221.md
-  HCCL Finalize → references/docs/ascendc/api_reference/pages/atlasascendc_api_07_0881.md
-  DataCopy(概览) → references/docs/ascendc/api_reference/pages/atlasascendc_api_07_0101.md
-  DataCopy(基础) → references/docs/ascendc/api_reference/pages/atlasascendc_api_07_0103.md
-  SetFlag/WaitFlag   → references/docs/ascendc/api_reference/pages/atlasascendc_api_07_0270.md
-  CrossCoreSetFlag   → references/docs/ascendc/api_reference/pages/atlasascendc_api_07_0273.md
-  CrossCoreWaitFlag  → references/docs/ascendc/api_reference/pages/atlasascendc_api_07_0274.md
-  PipeBarrier   → references/docs/ascendc/api_reference/pages/atlasascendc_api_07_0271.md
-  Muls          → references/docs/ascendc/api_reference/pages/atlasascendc_api_07_0055.md
-  TPipe         → references/docs/ascendc/api_reference/pages/atlasascendc_api_07_0108.md
-
-### 开发指南 (146页 = 基础知识92 + 最佳实践54)
-索引: references/docs/ascendc/developer_guide/INDEX.md
-页面目录: references/docs/ascendc/developer_guide/pages/
-查阅方式: Grep INDEX.md搜关键词 → Read pages/下对应.md
-
-高频主题:
-  核函数          → references/docs/ascendc/developer_guide/pages/atlas_ascendc_10_0014.md
-  TPipe和TQue编程 → references/docs/ascendc/developer_guide/pages/atlas_ascendc_10_0016.md
-  编程模型设计原理  → references/docs/ascendc/developer_guide/pages/atlas_ascendc_10_00015.md
-  DoubleBuffer    → references/docs/ascendc/developer_guide/pages/atlas_ascendc_10_00016.md
-  Scalar读写数据   → references/docs/ascendc/developer_guide/pages/atlas_ascendc_10_00030.md
-
----
-
-## 6. HCCL文档 (docs/hccl/)
-
-根目录: references/docs/hccl/
-
-按场景选择:
-  HCCL完整使用指南(中文)     → references/docs/hccl/HCCL集合通信库使用指南.md (4800+行，综合性中文指南)
-  Ascend C算子开发(中文)     → references/docs/hccl/Ascend C算子开发指南.md (18000+行，算子开发全流程)
-  通信整体流程、拓扑、算法   → references/docs/hccl/user-guide.md (3911行，用Grep搜索关键词)
-  C语言API用法              → references/docs/hccl/api-c.md (1514行)
-  Python API               → references/docs/hccl/api-python.md (888行)
-  AscendC + HCCL集成开发    → references/docs/hccl/ascendc-hccl.md (1009行，15个核心接口)
-  环境变量配置              → references/docs/hccl/env-vars.md (1051行)
-  性能测试工具              → references/docs/hccl/hccl-test.md (712行)
-  故障排查                  → references/docs/hccl/faq.md
-  版本迁移                  → references/docs/hccl/migration.md
-  目录总览                  → references/docs/hccl/README.md
